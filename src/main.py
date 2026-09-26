@@ -15,11 +15,15 @@ from fastapi import BackgroundTasks, FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 
 from config import Settings
+from site_monitoring.adapters.plan_fact_cache import PlanFactCache
+from site_monitoring.adapters.plan_fact_summarizer import PlanFactSummarizer
 from site_monitoring.adapters.run_storage import RunStorage
-from site_monitoring.container import build_dependencies
+from site_monitoring.adapters.shift_timeline_reader import ShiftTimelineReader
+from site_monitoring.container import build_dependencies, build_vlm_transport
 from site_monitoring.services.analysis_run import AnalysisRunService
+from site_monitoring.services.plan_fact_report import build_report, describe_stages, describe_summary
 from site_monitoring.uploaded_plan_pipeline import UploadedPlanPipeline
-from web_pages import render_index, render_run
+from web_pages import render_dashboard, render_index, render_run
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -28,17 +32,23 @@ APP_TITLE = "Контроль строительных площадок"
 HEALTH_STATUS_OK = "ok"
 DEMO_REPORT_PATH = Path("docs/demo_stand.html")
 RUNS_PATH = Path("data/runs")
+TIMELINES_PATH = Path("data/cache/shift_timelines.json")
+SUMMARY_PATH = Path("data/cache/plan_fact_summary.json")
+DASHBOARD_URL = "/dashboard"
 NO_PLAN_MESSAGE = "Не приложен календарный план"
 NO_PHOTOS_MESSAGE = "Не приложено ни одного снимка"
 NO_DEMO_MESSAGE = "Демонстрационный отчёт не собран: запустите scripts/build_demo_stand.py"
 NO_RUN_MESSAGE = "Прогон не найден"
 NO_REPORT_MESSAGE = "Отчёт этого прогона ещё не готов"
+NO_MODEL_MESSAGE = "Доступ к языковой модели не настроен"
 RUN_URL_TEMPLATE = "/runs/{run_id}"
 REDIRECT_CODE = 303
 
 settings = Settings()
 dependencies = build_dependencies(settings)
 storage = RunStorage(RUNS_PATH)
+timeline_reader = ShiftTimelineReader(TIMELINES_PATH)
+summary_cache = PlanFactCache(SUMMARY_PATH)
 app = FastAPI(title=APP_TITLE)
 
 
@@ -63,6 +73,30 @@ def demo() -> FileResponse:
         raise HTTPException(status_code=404, detail=NO_DEMO_MESSAGE)
     response = FileResponse(DEMO_REPORT_PATH)
     return response
+
+
+@app.get("/dashboard", response_class=HTMLResponse)
+def dashboard() -> HTMLResponse:
+    """Отвечает на главный вопрос: идём ли мы по календарному графику."""
+    report = _build_report()
+    page = render_dashboard(report, summary_cache.read())
+    return HTMLResponse(page)
+
+
+@app.get("/dashboard/summary")
+def dashboard_summary() -> RedirectResponse:
+    """Просит языковую модель изложить посчитанный план-факт словами."""
+    report = _build_report()
+    transport = build_vlm_transport(settings)
+    if transport is None:
+        raise HTTPException(status_code=503, detail=NO_MODEL_MESSAGE)
+    summarizer = PlanFactSummarizer(transport)
+    conclusion = summarizer.summarize(
+        describe_summary(report, settings.slot_minutes),
+        describe_stages(report),
+    )
+    summary_cache.write(conclusion)
+    return RedirectResponse(DASHBOARD_URL, status_code=REDIRECT_CODE)
 
 
 @app.post("/runs")
@@ -115,6 +149,16 @@ def assess_day(payload: dict[str, Any]) -> dict[str, Any]:
     assessment = dependencies.facade.assess_day(payload)
     response = asdict(assessment)
     return response
+
+
+def _build_report():
+    """Считает план-факт по разобранным сменам из кеша."""
+    titles = {
+        work_id: work.full_name.split(" → ")[-1]
+        for work_id, work in dependencies.works_by_id.items()
+    }
+    report = build_report(timeline_reader.read_timelines(), titles, settings.slots_per_shift)
+    return report
 
 
 def _execute_run(run_id: str) -> None:

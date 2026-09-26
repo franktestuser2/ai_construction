@@ -22,7 +22,7 @@
         "has_kit": false,
         "has_motion": true,
         "is_first": false,
-        "limited_view": false
+        "limited_view": true
       },
       {
         "index": 2,
@@ -32,7 +32,7 @@
         "has_kit": false,
         "has_motion": true,
         "is_first": false,
-        "limited_view": false
+        "limited_view": true
       },
       {
         "index": 3,
@@ -42,7 +42,7 @@
         "has_kit": false,
         "has_motion": true,
         "is_first": false,
-        "limited_view": false
+        "limited_view": true
       },
       {
         "index": 4,
@@ -62,7 +62,7 @@
         "has_kit": false,
         "has_motion": true,
         "is_first": false,
-        "limited_view": false
+        "limited_view": true
       },
       {
         "index": 6,
@@ -129,7 +129,7 @@
         "has_kit": false,
         "has_motion": true,
         "is_first": false,
-        "limited_view": true
+        "limited_view": false
       },
       {
         "index": 3,
@@ -169,7 +169,7 @@
         "has_kit": false,
         "has_motion": false,
         "is_first": false,
-        "limited_view": false
+        "limited_view": true
       },
       {
         "index": 7,
@@ -206,7 +206,7 @@
         "has_kit": true,
         "has_motion": false,
         "is_first": true,
-        "limited_view": true
+        "limited_view": false
       },
       {
         "index": 1,
@@ -216,7 +216,7 @@
         "has_kit": true,
         "has_motion": true,
         "is_first": false,
-        "limited_view": true
+        "limited_view": false
       },
       {
         "index": 2,
@@ -226,7 +226,7 @@
         "has_kit": true,
         "has_motion": true,
         "is_first": false,
-        "limited_view": true
+        "limited_view": false
       },
       {
         "index": 3,
@@ -236,7 +236,7 @@
         "has_kit": true,
         "has_motion": true,
         "is_first": false,
-        "limited_view": true
+        "limited_view": false
       },
       {
         "index": 4,
@@ -262,7 +262,7 @@
         "index": 6,
         "starts_at": "2026-10-07 11:00:00",
         "frame_id": "W03_2026-10-07_11-00.jpg",
-        "has_equipment": true,
+        "has_equipment": false,
         "has_kit": true,
         "has_motion": true,
         "is_first": false,
@@ -333,7 +333,7 @@
         "has_kit": true,
         "has_motion": true,
         "is_first": false,
-        "limited_view": true
+        "limited_view": false
       },
       {
         "index": 4,
@@ -361,7 +361,7 @@
         "frame_id": "W04_2026-10-08_11-00.jpg",
         "has_equipment": false,
         "has_kit": true,
-        "has_motion": true,
+        "has_motion": false,
         "is_first": false,
         "limited_view": false
       },
@@ -420,7 +420,7 @@
         "has_kit": true,
         "has_motion": true,
         "is_first": false,
-        "limited_view": true
+        "limited_view": false
       },
       {
         "index": 3,
@@ -440,7 +440,7 @@
         "has_kit": true,
         "has_motion": true,
         "is_first": false,
-        "limited_view": true
+        "limited_view": false
       },
       {
         "index": 5,
@@ -497,7 +497,7 @@
         "has_kit": false,
         "has_motion": false,
         "is_first": true,
-        "limited_view": true
+        "limited_view": false
       },
       {
         "index": 1,
@@ -557,7 +557,7 @@
         "has_kit": false,
         "has_motion": true,
         "is_first": false,
-        "limited_view": false
+        "limited_view": true
       },
       {
         "index": 7,

@@ -8,6 +8,8 @@
 from html import escape
 
 from site_monitoring.adapters.run_storage import STATUS_DONE, STATUS_FAILED, RunState
+from site_monitoring.entity import StageStatus
+from site_monitoring.services.plan_fact import PlanFact
 
 STYLE = """
 :root{--bg:#f4f5f7;--panel:#fff;--ink:#15181d;--muted:#5d6672;--line:#dfe3e8;
@@ -37,8 +39,19 @@ th{color:var(--muted);font-weight:600;font-size:12px}
 .pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:600}
 .ok{background:var(--ok-bg);color:var(--ok)}
 .bad{background:var(--bad-bg);color:var(--bad)}
+.warn{background:#fdf1de;color:#b26a00}
 .bar{height:10px;border-radius:5px;background:var(--bg);overflow:hidden;margin:10px 0 6px}
 .bar i{display:block;height:100%;background:var(--accent);transition:width .4s}
+.big{font-size:32px;font-weight:700;margin:0}
+.big.delayed{color:var(--bad)} .big.ok{color:var(--ok)}
+.kpis{display:flex;gap:12px;flex-wrap:wrap;margin:14px 0 4px}
+.kpi{flex:1 1 150px;background:var(--bg);border-radius:10px;padding:10px 12px}
+.kpi b{display:block;font-size:22px;line-height:1.25}
+.kpi span{color:var(--muted);font-size:12px}
+.conclusion{background:var(--bg);border-left:3px solid var(--accent);
+            border-radius:0 8px 8px 0;padding:12px 14px;margin-top:12px}
+.share{height:8px;border-radius:4px;background:var(--bg);overflow:hidden;min-width:90px}
+.share i{display:block;height:100%;background:var(--accent)}
 """
 
 INDEX_TEMPLATE = """<!DOCTYPE html>
@@ -49,6 +62,13 @@ INDEX_TEMPLATE = """<!DOCTYPE html>
 <h1>Контроль строительных площадок по снимкам</h1>
 <p class="sub">План-факт по календарному графику: какая техника нужна этапу, видна ли она
 на снимках, работала ли, и какова готовность фасада.</p>
+
+<div class="panel">
+  <h2>Идём ли мы по графику</h2>
+  <p class="note">Сводка план-факта по объекту: процент выполнения, отставание в днях
+  и заключение языковой модели над посчитанными числами.</p>
+  <a class="btn" href="/dashboard"><button type="button">Открыть сводку</button></a>
+</div>
 
 <div class="panel">
   <h2>Посмотреть демонстрацию</h2>
@@ -192,5 +212,97 @@ def render_run(state: RunState) -> str:
         status_block=_status_block(state),
         works_block=_works_block(state),
         script="" if finished else PROGRESS_SCRIPT,
+    )
+    return page
+
+
+DASHBOARD_TEMPLATE = """<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ход работ по графику</title><style>{style}</style></head>
+<body><div class="wrap">
+<h1>Идём ли мы по графику</h1>
+<p class="sub">План — объём смен по календарному графику в двадцатиминутных отрезках.
+Факт — отрезки, по которым подтверждена работа техники.</p>
+
+<div class="panel">
+  <p class="big {verdict_class}">{verdict}</p>
+  <div class="kpis">
+    <div class="kpi"><b>{completion}%</b><span>выполнено от измеренного</span></div>
+    <div class="kpi"><b>{counted} из {measured}</b><span>отрезков подтверждено</span></div>
+    <div class="kpi"><b>{lag}</b><span>дня отставания</span></div>
+    <div class="kpi"><b>{limited}</b><span>отрезков вне контроля ИИ</span></div>
+  </div>
+  <p class="note">Отрезки, где фронт работ не попал в кадр, вычтены из плана, а не
+  записаны в невыполненные: это непросматриваемый участок, а не простой подрядчика.
+  Они требуют ручной проверки.</p>
+  {conclusion}
+</div>
+
+<div class="panel">
+  <h2>Этапы</h2>
+  <table><thead><tr><th>Вид работ</th><th>Дата</th><th>Подтверждено</th>
+  <th>Выполнение</th><th>Вне контроля</th><th>Вывод</th></tr></thead>
+  <tbody>{rows}</tbody></table>
+</div>
+
+<p><a href="/">← к началу</a> · <a href="/demo">разбор по отрезкам</a></p>
+</div></body></html>
+"""
+
+NO_CONCLUSION_TEMPLATE = (
+    '<p class="note">Заключение не сформировано. '
+    '<a href="/dashboard/summary">Сформировать</a> — это обращение к модели, около десяти секунд.</p>'
+)
+CONCLUSION_TEMPLATE = (
+    '<div class="conclusion"><p>{summary}</p>'
+    '<p class="note">В первую очередь заняться: <b>{risk}</b></p></div>'
+)
+NO_DATA_TEXT = '<tr><td colspan="6" class="note">Разобранных смен нет.</td></tr>'
+STATUS_PILLS = {
+    StageStatus.ON_SCHEDULE: '<span class="pill ok">по графику</span>',
+    StageStatus.RISK_OF_DELAY: '<span class="pill warn">риск</span>',
+    StageStatus.DELAYED: '<span class="pill bad">отставание</span>',
+}
+DELAYED_CLASSES = {StageStatus.DELAYED: "delayed", StageStatus.ON_SCHEDULE: "ok"}
+PERCENT = 100
+
+
+def _stage_rows(report: PlanFact) -> str:
+    """Строки таблицы по этапам."""
+    if not report.stages:
+        return NO_DATA_TEXT
+    rows = ""
+    for stage in report.stages:
+        share = round(stage.completion * PERCENT)
+        rows += (
+            f"<tr><td>{escape(stage.title)}</td><td>{escape(stage.plan_date)}</td>"
+            f"<td>{stage.counted_slots} из {stage.measured_slots}</td>"
+            f'<td><div class="share"><i style="width:{share}%"></i></div>{share}%</td>'
+            f"<td>{stage.limited_slots or '—'}</td>"
+            f"<td>{STATUS_PILLS[stage.status]}</td></tr>"
+        )
+    return rows
+
+
+def render_dashboard(report: PlanFact, conclusion: dict[str, str] | None) -> str:
+    """Собирает страницу с ответом на вопрос, идём ли мы по графику."""
+    block = NO_CONCLUSION_TEMPLATE
+    if conclusion is not None:
+        block = CONCLUSION_TEMPLATE.format(
+            summary=escape(conclusion.get("заключение", "")),
+            risk=escape(conclusion.get("на_что_смотреть", "")),
+        )
+    page = DASHBOARD_TEMPLATE.format(
+        style=STYLE,
+        verdict=escape(report.status.value),
+        verdict_class=DELAYED_CLASSES.get(report.status, ""),
+        completion=round(report.completion * PERCENT),
+        counted=report.counted_slots,
+        measured=report.measured_slots,
+        lag=report.lag_days,
+        limited=report.limited_slots,
+        conclusion=block,
+        rows=_stage_rows(report),
     )
     return page
