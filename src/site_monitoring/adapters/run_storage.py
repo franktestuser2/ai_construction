@@ -8,8 +8,10 @@
 import json
 import logging
 import shutil
+import zipfile
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
+from io import BytesIO
 from pathlib import Path
 from uuid import uuid4
 
@@ -25,6 +27,12 @@ STATUS_ACCEPTED = "принят"
 STATUS_RUNNING = "разбирается"
 STATUS_DONE = "готов"
 STATUS_FAILED = "ошибка"
+IMAGE_SUFFIXES = (".jpg", ".jpeg", ".png", ".bmp", ".webp")
+ARCHIVE_SUFFIXES = (".zip",)
+# Защита от заведомо негодного архива: разумный предел на число и размер кадров.
+MAX_ARCHIVE_PHOTOS = 2000
+MAX_PHOTO_BYTES = 40 * 1024 * 1024
+NOTHING = 0
 
 
 @dataclass
@@ -94,6 +102,42 @@ class RunStorage:
         """Кладёт загруженный файл на диск."""
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(content)
+
+    def save_photos(self, run_id: str, filename: str, content: bytes) -> int:
+        """Кладёт снимки прогона и возвращает, сколько их получилось.
+
+        Принимается и отдельный снимок, и архив со снимками: пользователю удобнее
+        то одно, то другое. Архив распаковывается здесь же, на диск попадают только
+        изображения и только по имени файла — путей из архива мы не повторяем.
+        """
+        name = Path(filename).name
+        suffix = Path(name).suffix.lower()
+        if suffix in ARCHIVE_SUFFIXES:
+            return self._unpack_photos(run_id, content)
+        if suffix not in IMAGE_SUFFIXES:
+            logger.info("Файл %s не похож на снимок и пропущен", name)
+            return NOTHING
+        self.save_upload(self.photos_dir(run_id) / name, content)
+        return 1
+
+    def _unpack_photos(self, run_id: str, content: bytes) -> int:
+        """Достаёт изображения из архива, пропуская всё остальное."""
+        saved = NOTHING
+        with zipfile.ZipFile(BytesIO(content)) as archive:
+            for entry in archive.infolist():
+                if saved >= MAX_ARCHIVE_PHOTOS:
+                    logger.warning("В архиве больше %d снимков, остальные пропущены", MAX_ARCHIVE_PHOTOS)
+                    break
+                name = Path(entry.filename).name
+                if entry.is_dir() or Path(name).suffix.lower() not in IMAGE_SUFFIXES:
+                    continue
+                if entry.file_size > MAX_PHOTO_BYTES:
+                    logger.warning("Снимок %s слишком велик и пропущен", name)
+                    continue
+                self.save_upload(self.photos_dir(run_id) / name, archive.read(entry))
+                saved += 1
+        logger.info("Из архива извлечено снимков: %d", saved)
+        return saved
 
     def save(self, state: RunState) -> None:
         """Записывает состояние прогона."""

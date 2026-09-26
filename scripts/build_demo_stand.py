@@ -15,6 +15,7 @@ from PIL import Image
 CACHE_PATH = Path("data/cache/demo_v2_observations.json")
 PHOTOS_DIR = Path("data/photos_v2")
 SHIFT_TIMELINES_PATH = Path("data/cache/shift_timelines.json")
+SUMMARY_PATH = Path("data/cache/plan_fact_summary.json")
 SHIFT_OBSERVATIONS_PATH = Path("data/cache/shift_observations.json")
 SLOT_PHOTOS_DIR = Path("data/photos_slots")
 SLOT_MANIFEST_PATH = SLOT_PHOTOS_DIR / "manifest.json"
@@ -211,11 +212,65 @@ def collect_shifts() -> tuple[list[dict[str, object]], dict[str, str]]:
     return shifts, images
 
 
+def _foreign_count(work_id: str) -> int:
+    """Считает отрезки, где на кадре нашлась техника не по этапу."""
+    payload = json.loads(SHIFT_TIMELINES_PATH.read_text(encoding="utf-8"))
+    slots = payload.get(work_id, {}).get("slots", [])
+    found = sum(1 for slot in slots if slot.get("foreign_equipment"))
+    return found
+
+
+def build_dashboard() -> dict[str, object]:
+    """Считает сводку план-факта и подбирает заключение модели для показа."""
+    import sys
+
+    sys.path.insert(0, "src")
+    from config import Settings
+    from site_monitoring.adapters.shift_timeline_reader import ShiftTimelineReader
+    from site_monitoring.services.plan_fact_report import build_report
+
+    settings = Settings()
+    titles = _work_names()
+    timelines = ShiftTimelineReader(SHIFT_TIMELINES_PATH).read_timelines()
+    report = build_report(timelines, {k: v.split(" → ")[-1] for k, v in titles.items()}, settings.slots_per_shift)
+    conclusion = json.loads(SUMMARY_PATH.read_text(encoding="utf-8")) if SUMMARY_PATH.exists() else {}
+    payload = {
+        "status": report.status.value,
+        "completion": round(report.completion * 100),
+        "counted": report.counted_slots,
+        "measured": report.measured_slots,
+        "planned": report.planned_slots,
+        "limited": report.limited_slots,
+        "foreign": sum(_foreign_count(stage.work_id) for stage in report.stages),
+        "lag_days": report.lag_days,
+        "slot_minutes": settings.slot_minutes,
+        "slots_per_shift": settings.slots_per_shift,
+        "conclusion": conclusion,
+        "stages": [
+            {
+                "work_id": stage.work_id,
+                "title": stage.title,
+                "plan_date": stage.plan_date,
+                "planned": stage.planned_slots,
+                "measured": stage.measured_slots,
+                "counted": stage.counted_slots,
+                "limited": stage.limited_slots,
+                "foreign": _foreign_count(stage.work_id),
+                "completion": round(stage.completion * 100),
+                "status": stage.status.value,
+            }
+            for stage in report.stages
+        ],
+    }
+    return payload
+
+
 def main() -> None:
     """Записывает страницу стенда на диск."""
     payload = json.loads(CACHE_PATH.read_text(encoding="utf-8"))
     shifts, slot_images = collect_shifts()
     payload["shifts"] = shifts
+    payload["dashboard"] = build_dashboard()
     payload["images"] = collect_images(payload) | slot_images
     payload["about"] = ABOUT_HTML
     payload["built_at"] = datetime.now().strftime(BUILD_STAMP_FORMAT)

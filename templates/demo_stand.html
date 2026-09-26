@@ -106,6 +106,8 @@ table.plan td.total{padding:6px 10px;white-space:nowrap;color:var(--muted);font-
 .slotbox{border:1px solid transparent;border-radius:3px;padding:2px 1px;background:var(--empty-slot)}
 .slotbtn[aria-pressed="true"] .slotbox{outline:2px solid var(--accent);outline-offset:1px}
 .slotbox.counted{border-color:#1f6fd0;background:rgba(31,111,208,.2)}
+/* На кадре техника не по этапу: отдельное отклонение, на зачёт не влияет. */
+.slotbox.foreign{box-shadow:0 0 0 2px var(--vlm) inset}
 /* Фронт работ не виден: отрезок вне контроля ИИ, требует ручной проверки. */
 .slotbox.blind{border-color:var(--warn);background:repeating-linear-gradient(
   45deg,transparent,transparent 3px,color-mix(in srgb,var(--warn) 45%,transparent) 3px,
@@ -118,7 +120,26 @@ table.plan td.total{padding:6px 10px;white-space:nowrap;color:var(--muted);font-
 .stripe.motion.on{background:#2fa84f}
 tr.idle td{opacity:.5}
 .rolekind{display:block;font-size:11px;color:var(--muted)}
+.share{height:8px;border-radius:4px;background:var(--bg);overflow:hidden;min-width:80px;display:inline-block;vertical-align:middle;margin-right:6px}
+.share i{display:block;height:100%;background:var(--det)}
+.warn{background:var(--warn-bg);color:var(--warn)}
 .kitnote{margin:4px 0 10px;font-size:12px;line-height:1.4;color:var(--warn)}
+.explain{background:var(--bg);border-radius:10px;padding:12px 14px;margin-bottom:14px}
+.explain h3{margin:0 0 6px;font-size:14px}
+.explain p{margin:0 0 6px;font-size:13px;color:var(--muted)}
+.explain p:last-child{margin-bottom:0}
+.legendbox{border-top:1px solid var(--line);padding-top:10px;margin-bottom:10px}
+.legendbox h3{margin:0 0 6px;font-size:13px}
+.legendbox .note{margin:0 0 6px}
+.dashbig{font-size:34px;font-weight:700;margin:0 0 2px}
+.dashbig.delayed{color:var(--bad)} .dashbig.ok{color:var(--ok)}
+.dashkpis{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0 0}
+.dashkpi{flex:1 1 140px;background:var(--bg);border-radius:10px;padding:10px 12px}
+.dashkpi b{display:block;font-size:22px;line-height:1.25}
+.dashkpi span{color:var(--muted);font-size:12px}
+.verdictline{background:var(--bg);border-left:3px solid var(--det);border-radius:0 8px 8px 0;
+             padding:12px 14px;margin-top:14px}
+.cellshare{font-size:11px;color:var(--muted);text-align:center;margin-top:3px;font-weight:600}
 .shiftlegend{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--muted);margin:0 0 14px}
 .chip{display:inline-block;width:20px;height:9px;border-radius:2px;margin-right:6px;vertical-align:middle}
 th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
@@ -134,14 +155,22 @@ h3{font-size:14px;margin:16px 0 6px}
   <h1>Контроль строительной площадки по снимкам</h1>
   <div class="sub" id="subtitle"></div>
   <div class="tabs" role="tablist">
-    <button class="tab" role="tab" data-view="shifts" aria-selected="true">Смены по слотам</button>
+    <button class="tab" role="tab" data-view="dashboard" aria-selected="true">Дашборд руководителя</button>
+    <button class="tab" role="tab" data-view="shifts" aria-selected="false">Смены по слотам</button>
     <button class="tab" role="tab" data-view="frames" aria-selected="false">Просмотр снимков</button>
-    <button class="tab" role="tab" data-view="models" aria-selected="false">Что нашли модели</button>
     <button class="tab" role="tab" data-view="about" aria-selected="false">Что мы строим</button>
   </div>
 </header>
 <main>
-  <section class="view active" id="view-shifts">
+  <section class="view active" id="view-dashboard">
+    <div class="panel" id="dash-head"></div>
+    <div class="panel"><h2>Этапы календарного графика</h2><table id="dash-stages"></table>
+      <p class="hint">Отрезки, где фронт работ не попал в кадр, вычтены из плана, а не
+      записаны в невыполненные: это непросматриваемый участок, а не простой подрядчика.
+      Они показаны отдельным числом и требуют ручной проверки.</p></div>
+  </section>
+
+  <section class="view" id="view-shifts">
     <div class="panel" id="sh-viewer">
       <div class="viewgrid">
         <div class="stagewrap">
@@ -152,14 +181,45 @@ h3{font-size:14px;margin:16px 0 6px}
       </div>
     </div>
     <div class="panel">
-      <div class="shiftlegend">
-        <span><i class="chip" style="background:#e8b800"></i>техника на месте</span>
-        <span><i class="chip" style="background:#e87b00"></i>комплект собран за смену</span>
-        <span><i class="chip" style="background:#2fa84f"></i>техника работала</span>
-        <span><i class="chip" style="background:rgba(31,111,208,.6)"></i>слот засчитан</span>
-    <span>на фасадном этапе: здание · ячейки · изменение состава</span>
-    <span><i class="chip" style="background:var(--warn)"></i>фронт работ не виден, нужна ручная проверка</span>
+      <div class="explain">
+        <h3>Что такое смена и отрезок</h3>
+        <p>Камера присылает снимок раз в 20 минут. <b>Смена</b> — рабочий день одного вида
+        работ, разбитый на такие двадцатиминутные <b>отрезки</b>: три часа работ — девять
+        отрезков. Календарный график задаёт, в какой день какой вид работ идёт, поэтому
+        каждый снимок попадает в свой отрезок своей смены.</p>
+        <p>Отрезок считается отработанным, когда по нему собраны все признаки. Отсюда и
+        процент выполнения: подтверждённые отрезки к тем, которые удалось измерить.</p>
       </div>
+
+      <div class="legendbox">
+        <h3>W01–W06: этапы, где работу подтверждает техника</h3>
+        <div class="shiftlegend">
+          <span><i class="chip" style="background:#e8b800"></i>на кадре видна техника этапа</span>
+          <span><i class="chip" style="background:#e87b00"></i>комплект собран за смену</span>
+          <span><i class="chip" style="background:#2fa84f"></i>техника работала: что-то изменилось с прошлым кадром</span>
+        </div>
+      </div>
+
+      <div class="legendbox">
+        <h3>W07: этап, где работу подтверждает сам фасад</h3>
+        <p class="note">Техника здесь не проверяется вовсе: работают детектор зданий,
+        разбор фасада на ячейки и проверка ограждений. Полоски те же три, но означают другое.</p>
+        <div class="shiftlegend">
+          <span><i class="chip" style="background:#e8b800"></i>здание найдено на снимке</span>
+          <span><i class="chip" style="background:#e87b00"></i>фасад разобран на ячейки</span>
+          <span><i class="chip" style="background:#2fa84f"></i>состав ячеек изменился с прошлым кадром</span>
+        </div>
+      </div>
+
+      <div class="legendbox">
+        <h3>Общее для всех этапов</h3>
+        <div class="shiftlegend">
+          <span><i class="chip" style="background:rgba(31,111,208,.6)"></i>все три признака собраны — отрезок засчитан</span>
+          <span><i class="chip" style="background:var(--warn)"></i>фронт работ не виден: вне контроля ИИ, нужна ручная проверка</span>
+          <span><i class="chip" style="background:var(--vlm)"></i>на кадре техника не по этапу — отклонение</span>
+        </div>
+      </div>
+
       <div class="ganttwrap"><div id="shifts"></div></div>
       <p class="hint">На фасадном этапе полоски меняют смысл: жёлтая — здание найдено,
       оранжевая — ячейки фасада разобраны, зелёная — состав ячеек изменился с прошлым кадром.
@@ -188,14 +248,6 @@ h3{font-size:14px;margin:16px 0 6px}
         <p class="note">Стрелки ← → на клавиатуре листают снимки. Цвет квадрата — вердикт по этой контрольной дате.</p>
       </div>
       <div class="panel" id="details"></div>
-    </div>
-  </section>
-
-  <section class="view" id="view-models">
-    <div class="panel">
-      <h2>Что нашли модели на каждом снимке</h2>
-      <table id="modeltable"></table>
-      <p class="note">Источник «детектор» — RT-DETR, обученный на 17 классах строительной техники; находка подтверждается рамкой на снимке. Источник «VLM» — мультимодальная модель, отвечает на прямой вопрос о технике, которой в детекторе нет, и о том, работает ли она.</p>
     </div>
   </section>
 
@@ -299,20 +351,40 @@ function show(index){
   renderStrip();
 }
 
-function renderModels(){
-  const rows = frames.map((f, i) => {
-    const det = f.equipment.filter(e => e.source === 'detector')
-      .map(e => `${esc(e.machine_type)} ×${e.count} (${(e.confidence || 0).toFixed(2)})`).join('<br>') || '—';
-    const vlm = f.equipment.filter(e => e.source === 'vlm')
-      .map(e => `${esc(e.machine_type)} — ${esc(e.status)}`).join('<br>') || '—';
-    return `<tr><td>${i + 1}</td><td>${esc(f.captured_at.split(' ')[0])}</td><td>${esc(f.stage.short_name)}</td>
-      <td>${det}</td><td>${vlm}</td><td><span class="pill ${verdictClass(f)}">${verdictText(f)}</span></td></tr>`;
+function renderDashboard(){
+  const data = DATA.dashboard;
+  if(!data){ document.getElementById('dash-head').innerHTML = '<p class="note">Сводка не посчитана.</p>'; return; }
+  const cls = data.status === 'отставание' ? 'delayed' : (data.status === 'соответствие' ? 'ok' : '');
+  const conclusion = data.conclusion && data.conclusion['заключение']
+    ? `<div class="verdictline"><p>${esc(data.conclusion['заключение'])}</p>
+       <p class="note">В первую очередь заняться: <b>${esc(data.conclusion['на_что_смотреть'] || '')}</b></p>
+       <p class="note">Заключение сформировано языковой моделью по посчитанным числам.</p></div>`
+    : '<p class="note">Заключение модели не сформировано.</p>';
+  document.getElementById('dash-head').innerHTML = `
+    <h2>Идём ли мы по графику</h2>
+    <p class="dashbig ${cls}">${esc(data.status)}</p>
+    <p class="note">План — объём смен по календарному графику в отрезках по ${data.slot_minutes} минут.
+    Факт — отрезки, по которым подтверждена работа.</p>
+    <div class="dashkpis">
+      <div class="dashkpi"><b>${data.completion}%</b><span>выполнено от измеренного</span></div>
+      <div class="dashkpi"><b>${data.counted} из ${data.measured}</b><span>отрезков подтверждено</span></div>
+      <div class="dashkpi"><b>${data.lag_days}</b><span>дня отставания</span></div>
+      <div class="dashkpi"><b>${data.limited}</b><span>отрезков вне контроля ИИ</span></div>
+      <div class="dashkpi"><b>${data.foreign || 0}</b><span>отрезков с техникой не по этапу</span></div>
+    </div>
+    ${conclusion}`;
+  const rows = data.stages.map(stage => {
+    const pill = stage.status === 'соответствие' ? 'ok' : (stage.status === 'отставание' ? 'bad' : 'warn');
+    return `<tr><td>${esc(stage.work_id)} · ${esc(stage.title)}</td><td>${esc(stage.plan_date)}</td>
+      <td>${stage.counted} из ${stage.measured}</td>
+      <td><div class="share"><i style="width:${stage.completion}%"></i></div>${stage.completion}%</td>
+      <td>${stage.limited || '—'}</td><td>${stage.foreign || '—'}</td>
+      <td><span class="pill ${pill}">${esc(stage.status)}</span></td></tr>`;
   }).join('');
-  document.getElementById('modeltable').innerHTML =
-    `<thead><tr><th>№</th><th>Дата</th><th>Пункт плана</th><th>Детектор</th><th>VLM</th><th>Вердикт</th></tr></thead><tbody>${rows}</tbody>`;
+  document.getElementById('dash-stages').innerHTML =
+    `<thead><tr><th>Вид работ</th><th>Дата</th><th>Подтверждено</th><th>Выполнение</th>
+     <th>Вне контроля</th><th>Не по этапу</th><th>Вывод</th></tr></thead><tbody>${rows}</tbody>`;
 }
-
-const STRIPE_TITLES = {equipment:'техника на месте', kit:'комплект собран за смену', motion:'техника работала'};
 
 function slotTime(value){ return value.slice(11, 16); }
 
@@ -324,14 +396,16 @@ function dayLabel(iso){
 function slotButtonHtml(shift, slot, idx){
   const stripes = ['equipment','kit','motion']
     .map(name => `<div class="stripe ${name}${slot['has_' + name] ? ' on' : ''}"></div>`).join('');
+  const foreign = (slot.foreign_equipment || []).length
+    ? `, техника не по этапу: ${slot.foreign_equipment.join(', ')}` : '';
   const hint = !slot.frame_id
     ? `${slotTime(slot.starts_at)} — снимка не пришло`
     : slot.limited_view
       ? `${slotTime(slot.starts_at)} — фронт работ не виден, нужна ручная проверка`
-      : `${slotTime(slot.starts_at)} — ${slot.is_counted ? 'засчитан' : 'не засчитан'}`;
+      : `${slotTime(slot.starts_at)} — ${slot.is_counted ? 'засчитан' : 'не засчитан'}${foreign}`;
   return `<button class="slotbtn" data-work="${esc(shift.work_id)}" data-slot="${idx}"
     aria-pressed="false" ${slot.frame_id ? '' : 'disabled'} title="${esc(hint)}">
-    <div class="slotbox${slot.is_counted ? ' counted' : ''}${slot.limited_view ? ' blind' : ''}">${stripes}</div></button>`;
+    <div class="slotbox${slot.is_counted ? ' counted' : ''}${slot.limited_view ? ' blind' : ''}${(slot.foreign_equipment || []).length ? ' foreign' : ''}">${stripes}</div></button>`;
 }
 
 function renderShifts(){
@@ -344,14 +418,19 @@ function renderShifts(){
     const minutes = counted * shift.slot_minutes;
     const planned = shift.slots.length * shift.slot_minutes;
     const track = shift.slots.map((slot, idx) => slotButtonHtml(shift, slot, idx)).join('');
+    const measured = shift.slots.filter(s => s.frame_id && !s.limited_view).length;
+    const share = measured ? Math.round(100 * counted / measured) : 0;
     const cells = days.map(day => day === shift.plan_date
-      ? `<td class="day busy"><div class="minitrack">${track}</div></td>`
+      ? `<td class="day busy"><div class="minitrack">${track}</div>
+         <div class="cellshare">${measured ? share + '% плана' : 'нет данных'}</div></td>`
       : '<td class="day"></td>').join('');
     const blind = shift.slots.filter(s => s.limited_view).length;
+    const alien = shift.slots.filter(s => (s.foreign_equipment || []).length).length;
     const badge = (counted > 0
       ? '<span class="pill ok">по графику</span>'
       : '<span class="pill bad">не подтверждён</span>')
-      + (blind ? ` <span class="pill warn">вне контроля ИИ: ${blind}</span>` : '');
+      + (blind ? ` <span class="pill warn">вне контроля ИИ: ${blind}</span>` : '')
+      + (alien ? ` <span class="pill vlm">техника не по этапу: ${alien}</span>` : '');
     return `<tr><th class="worklabel">${esc(shift.work_id)} · ${esc(shift.work_name.split(' → ').pop())}
       <span class="kit">${esc(shift.kit || '')}</span></th>
       ${cells}<td class="total">${badge} ${minutes} из ${planned} мин</td></tr>`;
@@ -447,6 +526,7 @@ function openSlot(button){
     `<h2>${esc(shift.work_id)} · ${slotTime(slot.starts_at)}</h2>
      <p class="note">${esc(slot.frame_id)}</p>
      <p class="kitnote">${esc(shift.kit || '')}</p>
+     ${(slot.foreign_equipment || []).length ? `<p><span class="pill vlm">техника не по этапу</span> На кадре найдено то, чего на этом этапе быть не должно: <b>${esc(slot.foreign_equipment.join(', '))}</b>. В зачёт отрезка эта техника не идёт, но по требованиям это отклонение.</p>` : ''}
      ${slot.limited_view ? '<p><span class="pill warn">участок вне контроля ИИ</span> Фронт работ не попал в кадр: отрезок не засчитан, и в отставание он не пишется — данные требуют ручной проверки.</p>' : ''}
      <p>${slot.is_counted ? '<span class="pill ok">слот засчитан</span>' : '<span class="pill warn">слот не засчитан</span>'}
      ${stripes.length ? ' — ' + esc(stripes.join(', ')) : ' — ни одной полоски'}</p>
@@ -474,7 +554,7 @@ document.addEventListener('keydown', e => {
 
 document.getElementById('slider').max = String(frames.length - 1);
 document.getElementById('sh-viewer').classList.add('empty');
-renderModels(); renderAbout(); renderShifts(); show(0);
+renderDashboard(); renderAbout(); renderShifts(); show(0);
 </script>
 </body>
 </html>

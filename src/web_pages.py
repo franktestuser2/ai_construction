@@ -83,13 +83,17 @@ INDEX_TEMPLATE = """<!DOCTYPE html>
     <input id="plan" type="file" name="plan" accept=".xlsx,.xlsm,.csv,.txt" required>
     <p class="note">Колонки: вид работ, дата начала, дата окончания. Сведения о технике
     не нужны — правила берёт на себя сервис.</p>
-    <label for="photos">Снимки с камер</label>
-    <input id="photos" type="file" name="photos" accept="image/*" multiple required>
+    <label for="photos">Снимки с камер — файлами или архивом</label>
+    <input id="photos" type="file" name="photos" accept="image/*,.zip" multiple required>
     <p class="note">Снимки привязываются к этапам по времени съёмки из метаданных.
     Если времени нет, они раскладываются по этапам в порядке загрузки, и это будет
     отмечено в отчёте.</p>
     <button type="submit">Разобрать</button>
   </form>
+  <p class="note" style="margin-top:14px">Нечего загрузить? Возьмите готовый набор:
+  <a href="/sample/plan">календарный план</a> на семь этапов и
+  <a href="/sample/photos">49 снимков</a> с датами съёмки в метаданных.
+  Архив можно приложить как есть — сервис распакует его сам.</p>
 </div>
 
 <div class="panel">

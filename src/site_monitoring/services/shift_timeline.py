@@ -9,6 +9,9 @@
 | оранжевая | комплект собран за смену | ячейки фасада разобраны |
 | зелёная | техника работала между кадрами | состав ячеек изменился с прошлым кадром |
 
+Отдельно отмечается техника, которой на этапе быть не должно: на зачёт отрезка
+она не влияет, но по требованиям это отклонение, и оно показывается.
+
 Отдельно отмечаются отрезки, по которым фронт работ в кадр не попал: они не
 засчитываются, но и в отставание не пишутся — по требованиям такой участок
 считается вне контроля ИИ и требует ручной проверки.
@@ -31,7 +34,7 @@ from ..entity import (
     WorkEquipmentRules,
     WorkPosition,
 )
-from .position_matching import match_position
+from .position_matching import is_same_equipment, match_position
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +56,30 @@ def _facade_changed(previous: FacadeReadiness | None, current: FacadeReadiness |
     glazed = abs(current.glazed_share - previous.glazed_share)
     changed = max(closed, glazed) >= FACADE_CHANGE_THRESHOLD
     return changed
+
+
+def _foreign_equipment(
+    rules: WorkEquipmentRules,
+    observation: FrameObservation | None,
+) -> tuple[str, ...]:
+    """Отбирает технику, которой на этом этапе быть не должно.
+
+    По требованию ТЗ появление такой машины — отклонение, а не просто шум:
+    экскаватор на монтаже фасада означает, что на площадке идёт что-то другое.
+    В зачёт отрезка она и так не шла, но молчать о ней нельзя.
+    """
+    if observation is None:
+        return ()
+    alternatives = [item for position in rules.positions for item in position.alternatives]
+    foreign: list[str] = []
+    for unit in observation.equipment:
+        if unit.count <= NOTHING_FOUND:
+            continue
+        if any(is_same_equipment(alternative, unit) for alternative in alternatives):
+            continue
+        if unit.machine_type not in foreign:
+            foreign.append(unit.machine_type)
+    return tuple(foreign)
 
 
 def _count_matched(position: WorkPosition, observation: FrameObservation) -> int:
@@ -110,6 +137,7 @@ class ShiftTimelineService:
             has_motion=motion is not None and motion.has_motion,
             is_first=index == FIRST_SLOT_INDEX,
             limited_view=observation is not None and observation.limited_view,
+            foreign_equipment=_foreign_equipment(rules, observation),
         )
         return slot
 

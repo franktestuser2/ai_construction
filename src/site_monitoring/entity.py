@@ -336,6 +336,9 @@ class ShiftSlot:
     # Фронт работ не попал в кадр: снимок вне контроля ИИ и требует ручной проверки.
     # Такой отрезок не засчитывается, но и в отставание подрядчику не пишется.
     limited_view: bool = False
+    # Техника, которой на этом этапе быть не должно: отдельное отклонение по ТЗ.
+    # На зачёт отрезка не влияет — это предупреждение, а не провал работы.
+    foreign_equipment: tuple[str, ...] = field(default_factory=tuple)
 
     @property
     def stripes(self) -> tuple[SlotStripe, ...]:
@@ -393,6 +396,20 @@ class ShiftTimeline:
         """Число отрезков, по которым фронт работ не виден."""
         limited = sum(1 for slot in self.slots if slot.limited_view)
         return limited
+
+    @property
+    def foreign_slots(self) -> int:
+        """Число отрезков, где нашлась техника не по этапу."""
+        found = sum(1 for slot in self.slots if slot.foreign_equipment)
+        return found
+
+    @property
+    def foreign_machines(self) -> tuple[str, ...]:
+        """Перечень машин не по этапу, встреченных за смену."""
+        names: list[str] = []
+        for slot in self.slots:
+            names.extend(name for name in slot.foreign_equipment if name not in names)
+        return tuple(names)
 
     @property
     def needs_manual_check(self) -> bool:

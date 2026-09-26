@@ -12,7 +12,8 @@
         "has_kit": false,
         "has_motion": false,
         "is_first": true,
-        "limited_view": false
+        "limited_view": false,
+        "foreign_equipment": []
       },
       {
         "index": 1,
@@ -22,7 +23,8 @@
         "has_kit": false,
         "has_motion": true,
         "is_first": false,
-        "limited_view": true
+        "limited_view": true,
+        "foreign_equipment": []
       },
       {
         "index": 2,
@@ -32,7 +34,8 @@
         "has_kit": false,
         "has_motion": true,
         "is_first": false,
-        "limited_view": true
+        "limited_view": true,
+        "foreign_equipment": []
       },
       {
         "index": 3,
@@ -42,7 +45,8 @@
         "has_kit": false,
         "has_motion": true,
         "is_first": false,
-        "limited_view": true
+        "limited_view": true,
+        "foreign_equipment": []
       },
       {
         "index": 4,
@@ -52,7 +56,8 @@
         "has_kit": false,
         "has_motion": true,
         "is_first": false,
-        "limited_view": false
+        "limited_view": false,
+        "foreign_equipment": []
       },
       {
         "index": 5,
@@ -62,7 +67,8 @@
         "has_kit": false,
         "has_motion": true,
         "is_first": false,
-        "limited_view": true
+        "limited_view": true,
+        "foreign_equipment": []
       },
       {
         "index": 6,
@@ -72,7 +78,8 @@
         "has_kit": false,
         "has_motion": false,
         "is_first": false,
-        "limited_view": true
+        "limited_view": true,
+        "foreign_equipment": []
       },
       {
         "index": 7,
@@ -82,7 +89,8 @@
         "has_kit": false,
         "has_motion": false,
         "is_first": false,
-        "limited_view": false
+        "limited_view": false,
+        "foreign_equipment": []
       },
       {
         "index": 8,
@@ -92,7 +100,8 @@
         "has_kit": false,
         "has_motion": false,
         "is_first": false,
-        "limited_view": false
+        "limited_view": false,
+        "foreign_equipment": []
       }
     ]
   },
@@ -109,7 +118,8 @@
         "has_kit": false,
         "has_motion": false,
         "is_first": true,
-        "limited_view": false
+        "limited_view": false,
+        "foreign_equipment": []
       },
       {
         "index": 1,
@@ -119,7 +129,8 @@
         "has_kit": false,
         "has_motion": true,
         "is_first": false,
-        "limited_view": false
+        "limited_view": false,
+        "foreign_equipment": []
       },
       {
         "index": 2,
@@ -129,7 +140,8 @@
         "has_kit": false,
         "has_motion": true,
         "is_first": false,
-        "limited_view": false
+        "limited_view": false,
+        "foreign_equipment": []
       },
       {
         "index": 3,
@@ -139,7 +151,8 @@
         "has_kit": false,
         "has_motion": true,
         "is_first": false,
-        "limited_view": false
+        "limited_view": false,
+        "foreign_equipment": []
       },
       {
         "index": 4,
@@ -149,7 +162,8 @@
         "has_kit": false,
         "has_motion": true,
         "is_first": false,
-        "limited_view": false
+        "limited_view": false,
+        "foreign_equipment": []
       },
       {
         "index": 5,
@@ -159,7 +173,8 @@
         "has_kit": false,
         "has_motion": true,
         "is_first": false,
-        "limited_view": false
+        "limited_view": false,
+        "foreign_equipment": []
       },
       {
         "index": 6,
@@ -169,7 +184,8 @@
         "has_kit": false,
         "has_motion": false,
         "is_first": false,
-        "limited_view": true
+        "limited_view": true,
+        "foreign_equipment": []
       },
       {
         "index": 7,
@@ -179,7 +195,8 @@
         "has_kit": false,
         "has_motion": false,
         "is_first": false,
-        "limited_view": false
+        "limited_view": false,
+        "foreign_equipment": []
       },
       {
         "index": 8,
@@ -189,7 +206,8 @@
         "has_kit": false,
         "has_motion": false,
         "is_first": false,
-        "limited_view": false
+        "limited_view": false,
+        "foreign_equipment": []
       }
     ]
   },
@@ -206,7 +224,8 @@
         "has_kit": true,
         "has_motion": false,
         "is_first": true,
-        "limited_view": false
+        "limited_view": false,
+        "foreign_equipment": []
       },
       {
         "index": 1,
@@ -216,7 +235,8 @@
         "has_kit": true,
         "has_motion": true,
         "is_first": false,
-        "limited_view": false
+        "limited_view": false,
+        "foreign_equipment": []
       },
       {
         "index": 2,
@@ -226,7 +246,8 @@
         "has_kit": true,
         "has_motion": true,
         "is_first": false,
-        "limited_view": false
+        "limited_view": false,
+        "foreign_equipment": []
       },
       {
         "index": 3,
@@ -236,7 +257,8 @@
         "has_kit": true,
         "has_motion": true,
         "is_first": false,
-        "limited_view": false
+        "limited_view": false,
+        "foreign_equipment": []
       },
       {
         "index": 4,
@@ -246,7 +268,8 @@
         "has_kit": true,
         "has_motion": true,
         "is_first": false,
-        "limited_view": false
+        "limited_view": false,
+        "foreign_equipment": []
       },
       {
         "index": 5,
@@ -256,7 +279,8 @@
         "has_kit": true,
         "has_motion": true,
         "is_first": false,
-        "limited_view": false
+        "limited_view": false,
+        "foreign_equipment": []
       },
       {
         "index": 6,
@@ -266,7 +290,8 @@
         "has_kit": true,
         "has_motion": true,
         "is_first": false,
-        "limited_view": false
+        "limited_view": false,
+        "foreign_equipment": []
       },
       {
         "index": 7,
@@ -276,7 +301,8 @@
         "has_kit": false,
         "has_motion": false,
         "is_first": false,
-        "limited_view": false
+        "limited_view": false,
+        "foreign_equipment": []
       },
       {
         "index": 8,
@@ -286,7 +312,8 @@
         "has_kit": false,
         "has_motion": false,
         "is_first": false,
-        "limited_view": false
+        "limited_view": false,
+        "foreign_equipment": []
       }
     ]
   },
@@ -303,7 +330,8 @@
         "has_kit": true,
         "has_motion": false,
         "is_first": true,
-        "limited_view": false
+        "limited_view": false,
+        "foreign_equipment": []
       },
       {
         "index": 1,
@@ -313,7 +341,8 @@
         "has_kit": true,
         "has_motion": true,
         "is_first": false,
-        "limited_view": false
+        "limited_view": false,
+        "foreign_equipment": []
       },
       {
         "index": 2,
@@ -323,7 +352,8 @@
         "has_kit": true,
         "has_motion": true,
         "is_first": false,
-        "limited_view": false
+        "limited_view": false,
+        "foreign_equipment": []
       },
       {
         "index": 3,
@@ -333,7 +363,8 @@
         "has_kit": true,
         "has_motion": true,
         "is_first": false,
-        "limited_view": false
+        "limited_view": false,
+        "foreign_equipment": []
       },
       {
         "index": 4,
@@ -343,7 +374,8 @@
         "has_kit": true,
         "has_motion": true,
         "is_first": false,
-        "limited_view": false
+        "limited_view": false,
+        "foreign_equipment": []
       },
       {
         "index": 5,
@@ -353,7 +385,8 @@
         "has_kit": true,
         "has_motion": true,
         "is_first": false,
-        "limited_view": false
+        "limited_view": false,
+        "foreign_equipment": []
       },
       {
         "index": 6,
@@ -363,7 +396,10 @@
         "has_kit": true,
         "has_motion": false,
         "is_first": false,
-        "limited_view": false
+        "limited_view": false,
+        "foreign_equipment": [
+          "Dump truck"
+        ]
       },
       {
         "index": 7,
@@ -373,7 +409,8 @@
         "has_kit": false,
         "has_motion": false,
         "is_first": false,
-        "limited_view": false
+        "limited_view": false,
+        "foreign_equipment": []
       },
       {
         "index": 8,
@@ -383,7 +420,8 @@
         "has_kit": false,
         "has_motion": false,
         "is_first": false,
-        "limited_view": false
+        "limited_view": false,
+        "foreign_equipment": []
       }
     ]
   },
@@ -400,7 +438,8 @@
         "has_kit": true,
         "has_motion": false,
         "is_first": true,
-        "limited_view": false
+        "limited_view": false,
+        "foreign_equipment": []
       },
       {
         "index": 1,
@@ -410,7 +449,10 @@
         "has_kit": true,
         "has_motion": true,
         "is_first": false,
-        "limited_view": false
+        "limited_view": false,
+        "foreign_equipment": [
+          "Excavator"
+        ]
       },
       {
         "index": 2,
@@ -420,7 +462,10 @@
         "has_kit": true,
         "has_motion": true,
         "is_first": false,
-        "limited_view": false
+        "limited_view": false,
+        "foreign_equipment": [
+          "Excavator"
+        ]
       },
       {
         "index": 3,
@@ -430,7 +475,10 @@
         "has_kit": true,
         "has_motion": true,
         "is_first": false,
-        "limited_view": false
+        "limited_view": false,
+        "foreign_equipment": [
+          "Excavator"
+        ]
       },
       {
         "index": 4,
@@ -440,7 +488,10 @@
         "has_kit": true,
         "has_motion": true,
         "is_first": false,
-        "limited_view": false
+        "limited_view": false,
+        "foreign_equipment": [
+          "Excavator"
+        ]
       },
       {
         "index": 5,
@@ -450,7 +501,10 @@
         "has_kit": true,
         "has_motion": true,
         "is_first": false,
-        "limited_view": false
+        "limited_view": false,
+        "foreign_equipment": [
+          "Excavator"
+        ]
       },
       {
         "index": 6,
@@ -460,7 +514,13 @@
         "has_kit": true,
         "has_motion": true,
         "is_first": false,
-        "limited_view": false
+        "limited_view": false,
+        "foreign_equipment": [
+          "Bucket loader Big",
+          "Dump truck",
+          "Excavator",
+          "Trailer"
+        ]
       },
       {
         "index": 7,
@@ -470,7 +530,8 @@
         "has_kit": false,
         "has_motion": false,
         "is_first": false,
-        "limited_view": false
+        "limited_view": false,
+        "foreign_equipment": []
       },
       {
         "index": 8,
@@ -480,7 +541,8 @@
         "has_kit": false,
         "has_motion": false,
         "is_first": false,
-        "limited_view": false
+        "limited_view": false,
+        "foreign_equipment": []
       }
     ]
   },
@@ -497,7 +559,10 @@
         "has_kit": false,
         "has_motion": false,
         "is_first": true,
-        "limited_view": false
+        "limited_view": false,
+        "foreign_equipment": [
+          "Trailer"
+        ]
       },
       {
         "index": 1,
@@ -507,7 +572,10 @@
         "has_kit": false,
         "has_motion": true,
         "is_first": false,
-        "limited_view": false
+        "limited_view": false,
+        "foreign_equipment": [
+          "Trailer"
+        ]
       },
       {
         "index": 2,
@@ -517,7 +585,10 @@
         "has_kit": false,
         "has_motion": true,
         "is_first": false,
-        "limited_view": false
+        "limited_view": false,
+        "foreign_equipment": [
+          "Trailer"
+        ]
       },
       {
         "index": 3,
@@ -527,7 +598,10 @@
         "has_kit": false,
         "has_motion": true,
         "is_first": false,
-        "limited_view": false
+        "limited_view": false,
+        "foreign_equipment": [
+          "Trailer"
+        ]
       },
       {
         "index": 4,
@@ -537,7 +611,10 @@
         "has_kit": false,
         "has_motion": true,
         "is_first": false,
-        "limited_view": false
+        "limited_view": false,
+        "foreign_equipment": [
+          "Trailer"
+        ]
       },
       {
         "index": 5,
@@ -547,7 +624,8 @@
         "has_kit": false,
         "has_motion": true,
         "is_first": false,
-        "limited_view": false
+        "limited_view": false,
+        "foreign_equipment": []
       },
       {
         "index": 6,
@@ -557,7 +635,8 @@
         "has_kit": false,
         "has_motion": true,
         "is_first": false,
-        "limited_view": true
+        "limited_view": true,
+        "foreign_equipment": []
       },
       {
         "index": 7,
@@ -567,7 +646,8 @@
         "has_kit": false,
         "has_motion": false,
         "is_first": false,
-        "limited_view": false
+        "limited_view": false,
+        "foreign_equipment": []
       },
       {
         "index": 8,
@@ -577,7 +657,8 @@
         "has_kit": false,
         "has_motion": false,
         "is_first": false,
-        "limited_view": false
+        "limited_view": false,
+        "foreign_equipment": []
       }
     ]
   },
@@ -594,7 +675,8 @@
         "has_kit": true,
         "has_motion": false,
         "is_first": true,
-        "limited_view": false
+        "limited_view": false,
+        "foreign_equipment": []
       },
       {
         "index": 1,
@@ -604,7 +686,8 @@
         "has_kit": true,
         "has_motion": false,
         "is_first": false,
-        "limited_view": false
+        "limited_view": false,
+        "foreign_equipment": []
       },
       {
         "index": 2,
@@ -614,7 +697,8 @@
         "has_kit": true,
         "has_motion": true,
         "is_first": false,
-        "limited_view": false
+        "limited_view": false,
+        "foreign_equipment": []
       },
       {
         "index": 3,
@@ -624,7 +708,8 @@
         "has_kit": true,
         "has_motion": true,
         "is_first": false,
-        "limited_view": false
+        "limited_view": false,
+        "foreign_equipment": []
       },
       {
         "index": 4,
@@ -634,7 +719,8 @@
         "has_kit": true,
         "has_motion": true,
         "is_first": false,
-        "limited_view": false
+        "limited_view": false,
+        "foreign_equipment": []
       },
       {
         "index": 5,
@@ -644,7 +730,8 @@
         "has_kit": true,
         "has_motion": true,
         "is_first": false,
-        "limited_view": false
+        "limited_view": false,
+        "foreign_equipment": []
       },
       {
         "index": 6,
@@ -654,7 +741,8 @@
         "has_kit": true,
         "has_motion": true,
         "is_first": false,
-        "limited_view": false
+        "limited_view": false,
+        "foreign_equipment": []
       },
       {
         "index": 7,
@@ -664,7 +752,8 @@
         "has_kit": false,
         "has_motion": false,
         "is_first": false,
-        "limited_view": false
+        "limited_view": false,
+        "foreign_equipment": []
       },
       {
         "index": 8,
@@ -674,7 +763,8 @@
         "has_kit": false,
         "has_motion": false,
         "is_first": false,
-        "limited_view": false
+        "limited_view": false,
+        "foreign_equipment": []
       }
     ]
   }

@@ -34,13 +34,16 @@ DEMO_REPORT_PATH = Path("docs/demo_stand.html")
 RUNS_PATH = Path("data/runs")
 TIMELINES_PATH = Path("data/cache/shift_timelines.json")
 SUMMARY_PATH = Path("data/cache/plan_fact_summary.json")
+SAMPLE_PLAN_PATH = Path("data/sample/Календарный_план.xlsx")
+SAMPLE_PHOTOS_PATH = Path("data/sample/Снимки_с_камер.zip")
 DASHBOARD_URL = "/dashboard"
 NO_PLAN_MESSAGE = "Не приложен календарный план"
-NO_PHOTOS_MESSAGE = "Не приложено ни одного снимка"
+NO_PHOTOS_MESSAGE = "Не приложено ни одного снимка: нужны изображения либо архив с ними"
 NO_DEMO_MESSAGE = "Демонстрационный отчёт не собран: запустите scripts/build_demo_stand.py"
 NO_RUN_MESSAGE = "Прогон не найден"
 NO_REPORT_MESSAGE = "Отчёт этого прогона ещё не готов"
 NO_MODEL_MESSAGE = "Доступ к языковой модели не настроен"
+NO_SAMPLE_MESSAGE = "Демонстрационный набор не собран: запустите scripts/build_sample_package.py"
 RUN_URL_TEMPLATE = "/runs/{run_id}"
 REDIRECT_CODE = 303
 
@@ -73,6 +76,22 @@ def demo() -> FileResponse:
         raise HTTPException(status_code=404, detail=NO_DEMO_MESSAGE)
     response = FileResponse(DEMO_REPORT_PATH)
     return response
+
+
+@app.get("/sample/plan")
+def sample_plan() -> FileResponse:
+    """Отдаёт демонстрационный календарный план книгой Excel."""
+    if not SAMPLE_PLAN_PATH.exists():
+        raise HTTPException(status_code=404, detail=NO_SAMPLE_MESSAGE)
+    return FileResponse(SAMPLE_PLAN_PATH, filename=SAMPLE_PLAN_PATH.name)
+
+
+@app.get("/sample/photos")
+def sample_photos() -> FileResponse:
+    """Отдаёт демонстрационные снимки архивом: у каждого дата съёмки в метаданных."""
+    if not SAMPLE_PHOTOS_PATH.exists():
+        raise HTTPException(status_code=404, detail=NO_SAMPLE_MESSAGE)
+    return FileResponse(SAMPLE_PHOTOS_PATH, filename=SAMPLE_PHOTOS_PATH.name)
 
 
 @app.get("/dashboard", response_class=HTMLResponse)
@@ -112,12 +131,16 @@ async def create_run(
         raise HTTPException(status_code=400, detail=NO_PHOTOS_MESSAGE)
     state = storage.create()
     storage.save_upload(storage.plan_dir(state.run_id) / Path(plan.filename).name, await plan.read())
+    saved = 0
     for photo in photos:
         name = Path(photo.filename or "").name
         if name:
-            storage.save_upload(storage.photos_dir(state.run_id) / name, await photo.read())
+            saved += storage.save_photos(state.run_id, name, await photo.read())
+    if saved == 0:
+        storage.remove(state.run_id)
+        raise HTTPException(status_code=400, detail=NO_PHOTOS_MESSAGE)
     state.plan_file = Path(plan.filename).name
-    state.photo_count = len(photos)
+    state.photo_count = saved
     storage.save(state)
     background.add_task(_execute_run, state.run_id)
     return RedirectResponse(RUN_URL_TEMPLATE.format(run_id=state.run_id), status_code=REDIRECT_CODE)

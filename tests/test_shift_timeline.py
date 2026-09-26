@@ -455,3 +455,39 @@ def test_фасадный_слот_без_здания_помечается_вн
     # Assert
     assert timeline.slots[0].limited_view is True
     assert timeline.needs_manual_check is True
+
+
+def test_техника_не_по_этапу_отмечается_отклонением() -> None:
+    # Arrange: на кадре ведущий экскаватор и посторонний автогрейдер
+    alien = ObservedEquipment(
+        machine_type="Motor grader",
+        source=EquipmentSource.DETECTOR,
+        status=EquipmentStatus.WORKING,
+        count=1,
+    )
+    observation = FrameObservation(
+        frame_id="кадр-0",
+        observed_on=SHIFT_DATE,
+        equipment=(_equipment(LEAD_MACHINE), _equipment(SUPPORT_MACHINE), alien),
+    )
+
+    # Act
+    timeline = _service().build_timeline(_rules(), _frames((observation,), (None,)))
+
+    # Assert: отклонение зафиксировано, но зачёту отрезка не мешает
+    assert timeline.slots[0].foreign_equipment == ("Motor grader",)
+    assert timeline.slots[0].is_counted is True
+    assert timeline.foreign_slots == 1
+    assert timeline.foreign_machines == ("Motor grader",)
+
+
+def test_техника_из_правил_чужой_не_считается() -> None:
+    # Arrange
+    observations = (_frame(0, (LEAD_MACHINE, SUPPORT_MACHINE)),)
+
+    # Act
+    timeline = _service().build_timeline(_rules(), _frames(observations, (None,)))
+
+    # Assert
+    assert timeline.slots[0].foreign_equipment == ()
+    assert timeline.foreign_slots == 0
