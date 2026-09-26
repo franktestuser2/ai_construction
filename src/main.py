@@ -120,6 +120,12 @@ def assess_day(payload: dict[str, Any]) -> dict[str, Any]:
 def _execute_run(run_id: str) -> None:
     """Выполняет разбор загруженных данных в фоне."""
     pipeline = UploadedPlanPipeline(settings, storage.plan_dir(run_id))
-    known_titles = {work_id: work.full_name for work_id, work in dependencies.works_by_id.items()}
+    # Сопоставлять этап плана можно только с той работой, у которой заданы правила
+    # по технике: справочник работ шире правил, и без отбора этап уходил бы в пустоту.
+    known_titles = {
+        work_id: work.full_name
+        for work_id, work in dependencies.works_by_id.items()
+        if work_id in dependencies.rules_by_work
+    }
     service = AnalysisRunService(storage=storage, pipeline=pipeline, known_titles=known_titles)
     service.execute(run_id)
