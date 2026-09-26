@@ -106,6 +106,10 @@ table.plan td.total{padding:6px 10px;white-space:nowrap;color:var(--muted);font-
 .slotbox{border:1px solid transparent;border-radius:3px;padding:2px 1px;background:var(--empty-slot)}
 .slotbtn[aria-pressed="true"] .slotbox{outline:2px solid var(--accent);outline-offset:1px}
 .slotbox.counted{border-color:#1f6fd0;background:rgba(31,111,208,.2)}
+/* Фронт работ не виден: отрезок вне контроля ИИ, требует ручной проверки. */
+.slotbox.blind{border-color:var(--warn);background:repeating-linear-gradient(
+  45deg,transparent,transparent 3px,color-mix(in srgb,var(--warn) 45%,transparent) 3px,
+  color-mix(in srgb,var(--warn) 45%,transparent) 6px)}
 .stripe{height:4px;border-radius:1px;margin-bottom:2px;border:1px dashed var(--line);box-sizing:border-box}
 .stripe:last-child{margin-bottom:0}
 .stripe.on{border:none}
@@ -154,6 +158,7 @@ h3{font-size:14px;margin:16px 0 6px}
         <span><i class="chip" style="background:#2fa84f"></i>техника работала</span>
         <span><i class="chip" style="background:rgba(31,111,208,.6)"></i>слот засчитан</span>
     <span>на фасадном этапе: здание · ячейки · изменение состава</span>
+    <span><i class="chip" style="background:var(--warn)"></i>фронт работ не виден, нужна ручная проверка</span>
       </div>
       <div class="ganttwrap"><div id="shifts"></div></div>
       <p class="hint">На фасадном этапе полоски меняют смысл: жёлтая — здание найдено,
@@ -319,12 +324,14 @@ function dayLabel(iso){
 function slotButtonHtml(shift, slot, idx){
   const stripes = ['equipment','kit','motion']
     .map(name => `<div class="stripe ${name}${slot['has_' + name] ? ' on' : ''}"></div>`).join('');
-  const hint = slot.frame_id
-    ? `${slotTime(slot.starts_at)} — ${slot.is_counted ? 'засчитан' : 'не засчитан'}`
-    : `${slotTime(slot.starts_at)} — снимка не пришло`;
+  const hint = !slot.frame_id
+    ? `${slotTime(slot.starts_at)} — снимка не пришло`
+    : slot.limited_view
+      ? `${slotTime(slot.starts_at)} — фронт работ не виден, нужна ручная проверка`
+      : `${slotTime(slot.starts_at)} — ${slot.is_counted ? 'засчитан' : 'не засчитан'}`;
   return `<button class="slotbtn" data-work="${esc(shift.work_id)}" data-slot="${idx}"
     aria-pressed="false" ${slot.frame_id ? '' : 'disabled'} title="${esc(hint)}">
-    <div class="slotbox${slot.is_counted ? ' counted' : ''}">${stripes}</div></button>`;
+    <div class="slotbox${slot.is_counted ? ' counted' : ''}${slot.limited_view ? ' blind' : ''}">${stripes}</div></button>`;
 }
 
 function renderShifts(){
@@ -340,9 +347,11 @@ function renderShifts(){
     const cells = days.map(day => day === shift.plan_date
       ? `<td class="day busy"><div class="minitrack">${track}</div></td>`
       : '<td class="day"></td>').join('');
-    const badge = counted > 0
+    const blind = shift.slots.filter(s => s.limited_view).length;
+    const badge = (counted > 0
       ? '<span class="pill ok">по графику</span>'
-      : '<span class="pill bad">не подтверждён</span>';
+      : '<span class="pill bad">не подтверждён</span>')
+      + (blind ? ` <span class="pill warn">вне контроля ИИ: ${blind}</span>` : '');
     return `<tr><th class="worklabel">${esc(shift.work_id)} · ${esc(shift.work_name.split(' → ').pop())}
       <span class="kit">${esc(shift.kit || '')}</span></th>
       ${cells}<td class="total">${badge} ${minutes} из ${planned} мин</td></tr>`;
@@ -438,6 +447,7 @@ function openSlot(button){
     `<h2>${esc(shift.work_id)} · ${slotTime(slot.starts_at)}</h2>
      <p class="note">${esc(slot.frame_id)}</p>
      <p class="kitnote">${esc(shift.kit || '')}</p>
+     ${slot.limited_view ? '<p><span class="pill warn">участок вне контроля ИИ</span> Фронт работ не попал в кадр: отрезок не засчитан, и в отставание он не пишется — данные требуют ручной проверки.</p>' : ''}
      <p>${slot.is_counted ? '<span class="pill ok">слот засчитан</span>' : '<span class="pill warn">слот не засчитан</span>'}
      ${stripes.length ? ' — ' + esc(stripes.join(', ')) : ' — ни одной полоски'}</p>
      ${slotEquipmentHtml(slot.details)}

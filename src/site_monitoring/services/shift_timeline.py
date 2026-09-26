@@ -9,6 +9,10 @@
 | оранжевая | комплект собран за смену | ячейки фасада разобраны |
 | зелёная | техника работала между кадрами | состав ячеек изменился с прошлым кадром |
 
+Отдельно отмечаются отрезки, по которым фронт работ в кадр не попал: они не
+засчитываются, но и в отставание не пишутся — по требованиям такой участок
+считается вне контроля ИИ и требует ручной проверки.
+
 Первый снимок смены сравнивать не с чем, поэтому там хватает двух признаков.
 Слот, на который снимка не пришло, не засчитывается.
 """
@@ -105,6 +109,7 @@ class ShiftTimelineService:
             has_kit=kit_collected and observation is not None,
             has_motion=motion is not None and motion.has_motion,
             is_first=index == FIRST_SLOT_INDEX,
+            limited_view=observation is not None and observation.limited_view,
         )
         return slot
 
@@ -121,6 +126,8 @@ class ShiftTimelineService:
             has_kit=readiness is not None and readiness.cells_total > NOTHING_FOUND,
             has_motion=_facade_changed(previous, readiness),
             is_first=index == FIRST_SLOT_INDEX,
+            # Здание в кадре не найдено — значит фронт работ в него не попал.
+            limited_view=frame_id is not None and readiness is None,
         )
         return slot
 

@@ -333,6 +333,9 @@ class ShiftSlot:
     # Первый снимок смены не с чем сравнивать: предыдущего кадра нет.
     # Движение по нему не измеряется и для зачёта не требуется.
     is_first: bool
+    # Фронт работ не попал в кадр: снимок вне контроля ИИ и требует ручной проверки.
+    # Такой отрезок не засчитывается, но и в отставание подрядчику не пишется.
+    limited_view: bool = False
 
     @property
     def stripes(self) -> tuple[SlotStripe, ...]:
@@ -349,7 +352,7 @@ class ShiftSlot:
     @property
     def is_counted(self) -> bool:
         """Засчитан ли слот в отработанное время."""
-        if self.frame_id is None:
+        if self.frame_id is None or self.limited_view:
             return False
         if self.is_first:
             counted = self.has_equipment and self.has_kit
@@ -384,6 +387,18 @@ class ShiftTimeline:
         """Плановая длительность смены."""
         minutes = len(self.slots) * self.slot_minutes
         return minutes
+
+    @property
+    def limited_slots(self) -> int:
+        """Число отрезков, по которым фронт работ не виден."""
+        limited = sum(1 for slot in self.slots if slot.limited_view)
+        return limited
+
+    @property
+    def needs_manual_check(self) -> bool:
+        """Требует ли смена ручной проверки: часть площадки вне контроля ИИ."""
+        needed = self.limited_slots > 0
+        return needed
 
     @property
     def is_on_schedule(self) -> bool:

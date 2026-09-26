@@ -90,8 +90,12 @@ def collect_images(payload: dict[str, object]) -> dict[str, str]:
 
 
 def is_slot_counted(slot: dict[str, object]) -> bool:
-    """Повторяет правило зачёта: три полоски, у последнего слота достаточно двух."""
-    if slot["frame_id"] is None:
+    """Повторяет правило зачёта: три полоски, у первого слота достаточно двух.
+
+    Отрезок, по которому фронт работ не виден, не засчитывается ни при каких
+    полосках: такой участок вне контроля ИИ и требует ручной проверки.
+    """
+    if slot["frame_id"] is None or slot.get("limited_view"):
         return False
     stripes = [slot["has_equipment"], slot["has_kit"], slot["has_motion"]]
     required = FIRST_SLOT_STRIPES if slot["is_first"] else FULL_STRIPES

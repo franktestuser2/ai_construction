@@ -407,3 +407,51 @@ def test_пустой_кадр_жёлтую_полоску_не_зажигает
 
     # Assert
     assert timeline.slots[0].has_equipment is False
+
+
+def _limited_frame(index: int, machines: tuple[str, ...]) -> FrameObservation:
+    """Наблюдение по снимку, на котором фронт работ не виден."""
+    observation = FrameObservation(
+        frame_id=f"кадр-{index}",
+        observed_on=SHIFT_DATE,
+        equipment=tuple(_equipment(machine) for machine in machines),
+        limited_view=True,
+    )
+    return observation
+
+
+def test_снимок_вне_контроля_ии_не_засчитывается_даже_с_техникой() -> None:
+    # Arrange: техника на кадре видна, но фронт работ в кадр не попал
+    observations = (_limited_frame(0, (LEAD_MACHINE, SUPPORT_MACHINE)),)
+
+    # Act
+    timeline = _service().build_timeline(_rules(), _frames(observations, (None,)))
+
+    # Assert
+    assert timeline.slots[0].limited_view is True
+    assert timeline.slots[0].is_counted is False
+    assert timeline.needs_manual_check is True
+    assert timeline.limited_slots == 1
+
+
+def test_при_полном_обзоре_ручная_проверка_не_требуется() -> None:
+    # Arrange
+    observations = (_frame(0, (LEAD_MACHINE, SUPPORT_MACHINE)),)
+
+    # Act
+    timeline = _service().build_timeline(_rules(), _frames(observations, (None,)))
+
+    # Assert
+    assert timeline.needs_manual_check is False
+
+
+def test_фасадный_слот_без_здания_помечается_вне_контроля() -> None:
+    # Arrange
+    rules = WorkEquipmentRules(work_id=WORK_ID, positions=(), facade_check=True)
+
+    # Act
+    timeline = _service().build_timeline(rules, _facade_frames((None,)))
+
+    # Assert
+    assert timeline.slots[0].limited_view is True
+    assert timeline.needs_manual_check is True

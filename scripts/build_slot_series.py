@@ -31,6 +31,10 @@ logger = logging.getLogger(__name__)
 
 PLAN_PATH = Path("config/calendar_plan_new.json")
 ORIGINAL_DIR = Path("data/photos_v2")
+# Кадры, на которых площадка видна не целиком: крупные планы ковша, штабеля труб,
+# техники во весь кадр. По одному в конец каждой серии — проверка отбраковки
+# по требованию 1.4.4: такой участок вне контроля ИИ и требует ручной проверки.
+REJECTION_DIR = Path("materials/wrong_photos")
 
 GENERATED_DIR = Path("data/photos_generated")
 VARIANT_SEPARATOR = "-"
@@ -58,7 +62,7 @@ def load_plan() -> dict[str, object]:
     return payload
 
 
-def collect_frames(work_id: str) -> list[Path]:
+def collect_frames(work_id: str, order: int) -> list[Path]:
     """Собирает серию одного вида работ: опорный кадр и дорисованные из него варианты.
 
     Смена — это одна точка съёмки, поэтому в серию идут только кадры одной сцены.
@@ -75,7 +79,19 @@ def collect_frames(work_id: str) -> list[Path]:
     anchor_stem = variants[0].stem.rsplit(VARIANT_SEPARATOR, 1)[0]
     anchor = ORIGINAL_DIR / work_id / f"{anchor_stem}.jpg"
     frames = [anchor] + variants if anchor.exists() else list(variants)
+    rejection = _rejection_frame(order)
+    if rejection is not None:
+        frames.append(rejection)
     return frames
+
+
+def _rejection_frame(order: int) -> Path | None:
+    """Берёт кадр с неполным обзором, свой для каждого вида работ."""
+    frames = sorted(REJECTION_DIR.glob("*.jpg"))
+    if not frames:
+        return None
+    chosen = frames[order % len(frames)]
+    return chosen
 
 
 def shift_date(plan: dict[str, object], order: int) -> str:
@@ -85,13 +101,13 @@ def shift_date(plan: dict[str, object], order: int) -> str:
     return day.strftime(DAY_FORMAT)
 
 
-def build_series(stage: dict[str, object], day: str) -> list[dict[str, str]]:
+def build_series(stage: dict[str, object], day: str, order: int) -> list[dict[str, str]]:
     """Назначает кадрам этапа время внутри смены с шагом в двадцать минут."""
     work_id = str(stage[WORK_ID_KEY])
     work_name = str(stage[FULL_NAME_KEY])
     start = datetime.strptime(f"{day} {SHIFT_START_HOUR:02d}:00", RECORD_TIME_FORMAT)
     records = []
-    for slot, source in enumerate(collect_frames(work_id)):
+    for slot, source in enumerate(collect_frames(work_id, order)):
         captured_at = start + timedelta(minutes=SLOT_MINUTES * slot)
         record = {
             "file": f"{work_id}_{captured_at.strftime(FILE_TIME_FORMAT)}.jpg",
@@ -154,7 +170,7 @@ def main() -> int:
     for order, stage in enumerate(plan[STAGES_KEY]):  # type: ignore[union-attr, arg-type]
         day = shift_date(plan, order)
         days[str(stage[WORK_ID_KEY])] = day
-        series = build_series(stage, day)  # type: ignore[arg-type]
+        series = build_series(stage, day, order)  # type: ignore[arg-type]
         for record in series:
             save_frame(record)
         records.extend(series)

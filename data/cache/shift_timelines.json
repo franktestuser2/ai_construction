@@ -11,7 +11,8 @@
         "has_equipment": true,
         "has_kit": false,
         "has_motion": false,
-        "is_first": true
+        "is_first": true,
+        "limited_view": false
       },
       {
         "index": 1,
@@ -20,7 +21,8 @@
         "has_equipment": true,
         "has_kit": false,
         "has_motion": true,
-        "is_first": false
+        "is_first": false,
+        "limited_view": false
       },
       {
         "index": 2,
@@ -29,7 +31,8 @@
         "has_equipment": true,
         "has_kit": false,
         "has_motion": true,
-        "is_first": false
+        "is_first": false,
+        "limited_view": false
       },
       {
         "index": 3,
@@ -38,7 +41,8 @@
         "has_equipment": true,
         "has_kit": false,
         "has_motion": true,
-        "is_first": false
+        "is_first": false,
+        "limited_view": false
       },
       {
         "index": 4,
@@ -47,7 +51,8 @@
         "has_equipment": true,
         "has_kit": false,
         "has_motion": true,
-        "is_first": false
+        "is_first": false,
+        "limited_view": false
       },
       {
         "index": 5,
@@ -56,16 +61,18 @@
         "has_equipment": true,
         "has_kit": false,
         "has_motion": true,
-        "is_first": false
+        "is_first": false,
+        "limited_view": false
       },
       {
         "index": 6,
         "starts_at": "2026-10-05 11:00:00",
-        "frame_id": null,
-        "has_equipment": false,
+        "frame_id": "W01_2026-10-05_11-00.jpg",
+        "has_equipment": true,
         "has_kit": false,
         "has_motion": false,
-        "is_first": false
+        "is_first": false,
+        "limited_view": true
       },
       {
         "index": 7,
@@ -74,7 +81,8 @@
         "has_equipment": false,
         "has_kit": false,
         "has_motion": false,
-        "is_first": false
+        "is_first": false,
+        "limited_view": false
       },
       {
         "index": 8,
@@ -83,7 +91,8 @@
         "has_equipment": false,
         "has_kit": false,
         "has_motion": false,
-        "is_first": false
+        "is_first": false,
+        "limited_view": false
       }
     ]
   },
@@ -99,7 +108,8 @@
         "has_equipment": true,
         "has_kit": false,
         "has_motion": false,
-        "is_first": true
+        "is_first": true,
+        "limited_view": false
       },
       {
         "index": 1,
@@ -108,7 +118,8 @@
         "has_equipment": true,
         "has_kit": false,
         "has_motion": true,
-        "is_first": false
+        "is_first": false,
+        "limited_view": false
       },
       {
         "index": 2,
@@ -117,7 +128,8 @@
         "has_equipment": true,
         "has_kit": false,
         "has_motion": true,
-        "is_first": false
+        "is_first": false,
+        "limited_view": true
       },
       {
         "index": 3,
@@ -126,7 +138,8 @@
         "has_equipment": true,
         "has_kit": false,
         "has_motion": true,
-        "is_first": false
+        "is_first": false,
+        "limited_view": false
       },
       {
         "index": 4,
@@ -135,7 +148,8 @@
         "has_equipment": true,
         "has_kit": false,
         "has_motion": true,
-        "is_first": false
+        "is_first": false,
+        "limited_view": false
       },
       {
         "index": 5,
@@ -144,16 +158,18 @@
         "has_equipment": true,
         "has_kit": false,
         "has_motion": true,
-        "is_first": false
+        "is_first": false,
+        "limited_view": false
       },
       {
         "index": 6,
         "starts_at": "2026-10-06 11:00:00",
-        "frame_id": null,
+        "frame_id": "W02_2026-10-06_11-00.jpg",
         "has_equipment": false,
         "has_kit": false,
         "has_motion": false,
-        "is_first": false
+        "is_first": false,
+        "limited_view": false
       },
       {
         "index": 7,
@@ -162,7 +178,8 @@
         "has_equipment": false,
         "has_kit": false,
         "has_motion": false,
-        "is_first": false
+        "is_first": false,
+        "limited_view": false
       },
       {
         "index": 8,
@@ -171,7 +188,8 @@
         "has_equipment": false,
         "has_kit": false,
         "has_motion": false,
-        "is_first": false
+        "is_first": false,
+        "limited_view": false
       }
     ]
   },
@@ -187,7 +205,8 @@
         "has_equipment": true,
         "has_kit": true,
         "has_motion": false,
-        "is_first": true
+        "is_first": true,
+        "limited_view": true
       },
       {
         "index": 1,
@@ -196,7 +215,8 @@
         "has_equipment": true,
         "has_kit": true,
         "has_motion": true,
-        "is_first": false
+        "is_first": false,
+        "limited_view": true
       },
       {
         "index": 2,
@@ -205,7 +225,8 @@
         "has_equipment": false,
         "has_kit": true,
         "has_motion": true,
-        "is_first": false
+        "is_first": false,
+        "limited_view": true
       },
       {
         "index": 3,
@@ -214,7 +235,8 @@
         "has_equipment": true,
         "has_kit": true,
         "has_motion": true,
-        "is_first": false
+        "is_first": false,
+        "limited_view": true
       },
       {
         "index": 4,
@@ -223,7 +245,8 @@
         "has_equipment": true,
         "has_kit": true,
         "has_motion": true,
-        "is_first": false
+        "is_first": false,
+        "limited_view": false
       },
       {
         "index": 5,
@@ -232,16 +255,18 @@
         "has_equipment": true,
         "has_kit": true,
         "has_motion": true,
-        "is_first": false
+        "is_first": false,
+        "limited_view": false
       },
       {
         "index": 6,
         "starts_at": "2026-10-07 11:00:00",
-        "frame_id": null,
-        "has_equipment": false,
-        "has_kit": false,
-        "has_motion": false,
-        "is_first": false
+        "frame_id": "W03_2026-10-07_11-00.jpg",
+        "has_equipment": true,
+        "has_kit": true,
+        "has_motion": true,
+        "is_first": false,
+        "limited_view": false
       },
       {
         "index": 7,
@@ -250,7 +275,8 @@
         "has_equipment": false,
         "has_kit": false,
         "has_motion": false,
-        "is_first": false
+        "is_first": false,
+        "limited_view": false
       },
       {
         "index": 8,
@@ -259,7 +285,8 @@
         "has_equipment": false,
         "has_kit": false,
         "has_motion": false,
-        "is_first": false
+        "is_first": false,
+        "limited_view": false
       }
     ]
   },
@@ -275,7 +302,8 @@
         "has_equipment": true,
         "has_kit": true,
         "has_motion": false,
-        "is_first": true
+        "is_first": true,
+        "limited_view": false
       },
       {
         "index": 1,
@@ -284,7 +312,8 @@
         "has_equipment": true,
         "has_kit": true,
         "has_motion": true,
-        "is_first": false
+        "is_first": false,
+        "limited_view": false
       },
       {
         "index": 2,
@@ -293,7 +322,8 @@
         "has_equipment": true,
         "has_kit": true,
         "has_motion": true,
-        "is_first": false
+        "is_first": false,
+        "limited_view": false
       },
       {
         "index": 3,
@@ -302,7 +332,8 @@
         "has_equipment": true,
         "has_kit": true,
         "has_motion": true,
-        "is_first": false
+        "is_first": false,
+        "limited_view": true
       },
       {
         "index": 4,
@@ -311,7 +342,8 @@
         "has_equipment": true,
         "has_kit": true,
         "has_motion": true,
-        "is_first": false
+        "is_first": false,
+        "limited_view": false
       },
       {
         "index": 5,
@@ -320,16 +352,18 @@
         "has_equipment": true,
         "has_kit": true,
         "has_motion": true,
-        "is_first": false
+        "is_first": false,
+        "limited_view": false
       },
       {
         "index": 6,
         "starts_at": "2026-10-08 11:00:00",
-        "frame_id": null,
+        "frame_id": "W04_2026-10-08_11-00.jpg",
         "has_equipment": false,
-        "has_kit": false,
-        "has_motion": false,
-        "is_first": false
+        "has_kit": true,
+        "has_motion": true,
+        "is_first": false,
+        "limited_view": false
       },
       {
         "index": 7,
@@ -338,7 +372,8 @@
         "has_equipment": false,
         "has_kit": false,
         "has_motion": false,
-        "is_first": false
+        "is_first": false,
+        "limited_view": false
       },
       {
         "index": 8,
@@ -347,7 +382,8 @@
         "has_equipment": false,
         "has_kit": false,
         "has_motion": false,
-        "is_first": false
+        "is_first": false,
+        "limited_view": false
       }
     ]
   },
@@ -363,7 +399,8 @@
         "has_equipment": true,
         "has_kit": true,
         "has_motion": false,
-        "is_first": true
+        "is_first": true,
+        "limited_view": false
       },
       {
         "index": 1,
@@ -372,7 +409,8 @@
         "has_equipment": true,
         "has_kit": true,
         "has_motion": true,
-        "is_first": false
+        "is_first": false,
+        "limited_view": false
       },
       {
         "index": 2,
@@ -381,7 +419,8 @@
         "has_equipment": true,
         "has_kit": true,
         "has_motion": true,
-        "is_first": false
+        "is_first": false,
+        "limited_view": true
       },
       {
         "index": 3,
@@ -390,7 +429,8 @@
         "has_equipment": true,
         "has_kit": true,
         "has_motion": true,
-        "is_first": false
+        "is_first": false,
+        "limited_view": false
       },
       {
         "index": 4,
@@ -399,7 +439,8 @@
         "has_equipment": true,
         "has_kit": true,
         "has_motion": true,
-        "is_first": false
+        "is_first": false,
+        "limited_view": true
       },
       {
         "index": 5,
@@ -408,16 +449,18 @@
         "has_equipment": true,
         "has_kit": true,
         "has_motion": true,
-        "is_first": false
+        "is_first": false,
+        "limited_view": false
       },
       {
         "index": 6,
         "starts_at": "2026-10-09 11:00:00",
-        "frame_id": null,
-        "has_equipment": false,
-        "has_kit": false,
-        "has_motion": false,
-        "is_first": false
+        "frame_id": "W05_2026-10-09_11-00.jpg",
+        "has_equipment": true,
+        "has_kit": true,
+        "has_motion": true,
+        "is_first": false,
+        "limited_view": false
       },
       {
         "index": 7,
@@ -426,7 +469,8 @@
         "has_equipment": false,
         "has_kit": false,
         "has_motion": false,
-        "is_first": false
+        "is_first": false,
+        "limited_view": false
       },
       {
         "index": 8,
@@ -435,7 +479,8 @@
         "has_equipment": false,
         "has_kit": false,
         "has_motion": false,
-        "is_first": false
+        "is_first": false,
+        "limited_view": false
       }
     ]
   },
@@ -451,7 +496,8 @@
         "has_equipment": true,
         "has_kit": false,
         "has_motion": false,
-        "is_first": true
+        "is_first": true,
+        "limited_view": true
       },
       {
         "index": 1,
@@ -460,7 +506,8 @@
         "has_equipment": true,
         "has_kit": false,
         "has_motion": true,
-        "is_first": false
+        "is_first": false,
+        "limited_view": false
       },
       {
         "index": 2,
@@ -469,7 +516,8 @@
         "has_equipment": true,
         "has_kit": false,
         "has_motion": true,
-        "is_first": false
+        "is_first": false,
+        "limited_view": false
       },
       {
         "index": 3,
@@ -478,7 +526,8 @@
         "has_equipment": true,
         "has_kit": false,
         "has_motion": true,
-        "is_first": false
+        "is_first": false,
+        "limited_view": false
       },
       {
         "index": 4,
@@ -487,7 +536,8 @@
         "has_equipment": true,
         "has_kit": false,
         "has_motion": true,
-        "is_first": false
+        "is_first": false,
+        "limited_view": false
       },
       {
         "index": 5,
@@ -496,16 +546,18 @@
         "has_equipment": false,
         "has_kit": false,
         "has_motion": true,
-        "is_first": false
+        "is_first": false,
+        "limited_view": false
       },
       {
         "index": 6,
         "starts_at": "2026-10-10 11:00:00",
-        "frame_id": null,
+        "frame_id": "W06_2026-10-10_11-00.jpg",
         "has_equipment": false,
         "has_kit": false,
-        "has_motion": false,
-        "is_first": false
+        "has_motion": true,
+        "is_first": false,
+        "limited_view": false
       },
       {
         "index": 7,
@@ -514,7 +566,8 @@
         "has_equipment": false,
         "has_kit": false,
         "has_motion": false,
-        "is_first": false
+        "is_first": false,
+        "limited_view": false
       },
       {
         "index": 8,
@@ -523,7 +576,8 @@
         "has_equipment": false,
         "has_kit": false,
         "has_motion": false,
-        "is_first": false
+        "is_first": false,
+        "limited_view": false
       }
     ]
   },
@@ -539,7 +593,8 @@
         "has_equipment": true,
         "has_kit": true,
         "has_motion": false,
-        "is_first": true
+        "is_first": true,
+        "limited_view": false
       },
       {
         "index": 1,
@@ -548,7 +603,8 @@
         "has_equipment": true,
         "has_kit": true,
         "has_motion": false,
-        "is_first": false
+        "is_first": false,
+        "limited_view": false
       },
       {
         "index": 2,
@@ -557,7 +613,8 @@
         "has_equipment": true,
         "has_kit": true,
         "has_motion": true,
-        "is_first": false
+        "is_first": false,
+        "limited_view": false
       },
       {
         "index": 3,
@@ -566,7 +623,8 @@
         "has_equipment": true,
         "has_kit": true,
         "has_motion": true,
-        "is_first": false
+        "is_first": false,
+        "limited_view": false
       },
       {
         "index": 4,
@@ -575,7 +633,8 @@
         "has_equipment": true,
         "has_kit": true,
         "has_motion": true,
-        "is_first": false
+        "is_first": false,
+        "limited_view": false
       },
       {
         "index": 5,
@@ -584,16 +643,18 @@
         "has_equipment": true,
         "has_kit": true,
         "has_motion": true,
-        "is_first": false
+        "is_first": false,
+        "limited_view": false
       },
       {
         "index": 6,
         "starts_at": "2026-10-11 11:00:00",
-        "frame_id": null,
-        "has_equipment": false,
-        "has_kit": false,
-        "has_motion": false,
-        "is_first": false
+        "frame_id": "W07_2026-10-11_11-00.jpg",
+        "has_equipment": true,
+        "has_kit": true,
+        "has_motion": true,
+        "is_first": false,
+        "limited_view": false
       },
       {
         "index": 7,
@@ -602,7 +663,8 @@
         "has_equipment": false,
         "has_kit": false,
         "has_motion": false,
-        "is_first": false
+        "is_first": false,
+        "limited_view": false
       },
       {
         "index": 8,
@@ -611,7 +673,8 @@
         "has_equipment": false,
         "has_kit": false,
         "has_motion": false,
-        "is_first": false
+        "is_first": false,
+        "limited_view": false
       }
     ]
   }
