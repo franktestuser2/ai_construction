@@ -1,0 +1,618 @@
+{
+  "W01": {
+    "plan_date": "2026-10-05",
+    "work_id": "W01",
+    "slot_minutes": 20,
+    "slots": [
+      {
+        "index": 0,
+        "starts_at": "2026-10-05 09:00:00",
+        "frame_id": "W01_2026-10-05_09-00.jpg",
+        "has_equipment": true,
+        "has_kit": false,
+        "has_motion": false,
+        "is_first": true
+      },
+      {
+        "index": 1,
+        "starts_at": "2026-10-05 09:20:00",
+        "frame_id": "W01_2026-10-05_09-20.jpg",
+        "has_equipment": true,
+        "has_kit": false,
+        "has_motion": true,
+        "is_first": false
+      },
+      {
+        "index": 2,
+        "starts_at": "2026-10-05 09:40:00",
+        "frame_id": "W01_2026-10-05_09-40.jpg",
+        "has_equipment": true,
+        "has_kit": false,
+        "has_motion": true,
+        "is_first": false
+      },
+      {
+        "index": 3,
+        "starts_at": "2026-10-05 10:00:00",
+        "frame_id": "W01_2026-10-05_10-00.jpg",
+        "has_equipment": true,
+        "has_kit": false,
+        "has_motion": true,
+        "is_first": false
+      },
+      {
+        "index": 4,
+        "starts_at": "2026-10-05 10:20:00",
+        "frame_id": "W01_2026-10-05_10-20.jpg",
+        "has_equipment": true,
+        "has_kit": false,
+        "has_motion": true,
+        "is_first": false
+      },
+      {
+        "index": 5,
+        "starts_at": "2026-10-05 10:40:00",
+        "frame_id": "W01_2026-10-05_10-40.jpg",
+        "has_equipment": true,
+        "has_kit": false,
+        "has_motion": true,
+        "is_first": false
+      },
+      {
+        "index": 6,
+        "starts_at": "2026-10-05 11:00:00",
+        "frame_id": null,
+        "has_equipment": false,
+        "has_kit": false,
+        "has_motion": false,
+        "is_first": false
+      },
+      {
+        "index": 7,
+        "starts_at": "2026-10-05 11:20:00",
+        "frame_id": null,
+        "has_equipment": false,
+        "has_kit": false,
+        "has_motion": false,
+        "is_first": false
+      },
+      {
+        "index": 8,
+        "starts_at": "2026-10-05 11:40:00",
+        "frame_id": null,
+        "has_equipment": false,
+        "has_kit": false,
+        "has_motion": false,
+        "is_first": false
+      }
+    ]
+  },
+  "W02": {
+    "plan_date": "2026-10-06",
+    "work_id": "W02",
+    "slot_minutes": 20,
+    "slots": [
+      {
+        "index": 0,
+        "starts_at": "2026-10-06 09:00:00",
+        "frame_id": "W02_2026-10-06_09-00.jpg",
+        "has_equipment": true,
+        "has_kit": false,
+        "has_motion": false,
+        "is_first": true
+      },
+      {
+        "index": 1,
+        "starts_at": "2026-10-06 09:20:00",
+        "frame_id": "W02_2026-10-06_09-20.jpg",
+        "has_equipment": true,
+        "has_kit": false,
+        "has_motion": true,
+        "is_first": false
+      },
+      {
+        "index": 2,
+        "starts_at": "2026-10-06 09:40:00",
+        "frame_id": "W02_2026-10-06_09-40.jpg",
+        "has_equipment": true,
+        "has_kit": false,
+        "has_motion": true,
+        "is_first": false
+      },
+      {
+        "index": 3,
+        "starts_at": "2026-10-06 10:00:00",
+        "frame_id": "W02_2026-10-06_10-00.jpg",
+        "has_equipment": true,
+        "has_kit": false,
+        "has_motion": true,
+        "is_first": false
+      },
+      {
+        "index": 4,
+        "starts_at": "2026-10-06 10:20:00",
+        "frame_id": "W02_2026-10-06_10-20.jpg",
+        "has_equipment": true,
+        "has_kit": false,
+        "has_motion": true,
+        "is_first": false
+      },
+      {
+        "index": 5,
+        "starts_at": "2026-10-06 10:40:00",
+        "frame_id": "W02_2026-10-06_10-40.jpg",
+        "has_equipment": true,
+        "has_kit": false,
+        "has_motion": true,
+        "is_first": false
+      },
+      {
+        "index": 6,
+        "starts_at": "2026-10-06 11:00:00",
+        "frame_id": null,
+        "has_equipment": false,
+        "has_kit": false,
+        "has_motion": false,
+        "is_first": false
+      },
+      {
+        "index": 7,
+        "starts_at": "2026-10-06 11:20:00",
+        "frame_id": null,
+        "has_equipment": false,
+        "has_kit": false,
+        "has_motion": false,
+        "is_first": false
+      },
+      {
+        "index": 8,
+        "starts_at": "2026-10-06 11:40:00",
+        "frame_id": null,
+        "has_equipment": false,
+        "has_kit": false,
+        "has_motion": false,
+        "is_first": false
+      }
+    ]
+  },
+  "W03": {
+    "plan_date": "2026-10-07",
+    "work_id": "W03",
+    "slot_minutes": 20,
+    "slots": [
+      {
+        "index": 0,
+        "starts_at": "2026-10-07 09:00:00",
+        "frame_id": "W03_2026-10-07_09-00.jpg",
+        "has_equipment": true,
+        "has_kit": true,
+        "has_motion": false,
+        "is_first": true
+      },
+      {
+        "index": 1,
+        "starts_at": "2026-10-07 09:20:00",
+        "frame_id": "W03_2026-10-07_09-20.jpg",
+        "has_equipment": true,
+        "has_kit": true,
+        "has_motion": true,
+        "is_first": false
+      },
+      {
+        "index": 2,
+        "starts_at": "2026-10-07 09:40:00",
+        "frame_id": "W03_2026-10-07_09-40.jpg",
+        "has_equipment": false,
+        "has_kit": true,
+        "has_motion": true,
+        "is_first": false
+      },
+      {
+        "index": 3,
+        "starts_at": "2026-10-07 10:00:00",
+        "frame_id": "W03_2026-10-07_10-00.jpg",
+        "has_equipment": true,
+        "has_kit": true,
+        "has_motion": true,
+        "is_first": false
+      },
+      {
+        "index": 4,
+        "starts_at": "2026-10-07 10:20:00",
+        "frame_id": "W03_2026-10-07_10-20.jpg",
+        "has_equipment": true,
+        "has_kit": true,
+        "has_motion": true,
+        "is_first": false
+      },
+      {
+        "index": 5,
+        "starts_at": "2026-10-07 10:40:00",
+        "frame_id": "W03_2026-10-07_10-40.jpg",
+        "has_equipment": true,
+        "has_kit": true,
+        "has_motion": true,
+        "is_first": false
+      },
+      {
+        "index": 6,
+        "starts_at": "2026-10-07 11:00:00",
+        "frame_id": null,
+        "has_equipment": false,
+        "has_kit": false,
+        "has_motion": false,
+        "is_first": false
+      },
+      {
+        "index": 7,
+        "starts_at": "2026-10-07 11:20:00",
+        "frame_id": null,
+        "has_equipment": false,
+        "has_kit": false,
+        "has_motion": false,
+        "is_first": false
+      },
+      {
+        "index": 8,
+        "starts_at": "2026-10-07 11:40:00",
+        "frame_id": null,
+        "has_equipment": false,
+        "has_kit": false,
+        "has_motion": false,
+        "is_first": false
+      }
+    ]
+  },
+  "W04": {
+    "plan_date": "2026-10-08",
+    "work_id": "W04",
+    "slot_minutes": 20,
+    "slots": [
+      {
+        "index": 0,
+        "starts_at": "2026-10-08 09:00:00",
+        "frame_id": "W04_2026-10-08_09-00.jpg",
+        "has_equipment": true,
+        "has_kit": true,
+        "has_motion": false,
+        "is_first": true
+      },
+      {
+        "index": 1,
+        "starts_at": "2026-10-08 09:20:00",
+        "frame_id": "W04_2026-10-08_09-20.jpg",
+        "has_equipment": true,
+        "has_kit": true,
+        "has_motion": true,
+        "is_first": false
+      },
+      {
+        "index": 2,
+        "starts_at": "2026-10-08 09:40:00",
+        "frame_id": "W04_2026-10-08_09-40.jpg",
+        "has_equipment": true,
+        "has_kit": true,
+        "has_motion": true,
+        "is_first": false
+      },
+      {
+        "index": 3,
+        "starts_at": "2026-10-08 10:00:00",
+        "frame_id": "W04_2026-10-08_10-00.jpg",
+        "has_equipment": true,
+        "has_kit": true,
+        "has_motion": true,
+        "is_first": false
+      },
+      {
+        "index": 4,
+        "starts_at": "2026-10-08 10:20:00",
+        "frame_id": "W04_2026-10-08_10-20.jpg",
+        "has_equipment": true,
+        "has_kit": true,
+        "has_motion": true,
+        "is_first": false
+      },
+      {
+        "index": 5,
+        "starts_at": "2026-10-08 10:40:00",
+        "frame_id": "W04_2026-10-08_10-40.jpg",
+        "has_equipment": true,
+        "has_kit": true,
+        "has_motion": true,
+        "is_first": false
+      },
+      {
+        "index": 6,
+        "starts_at": "2026-10-08 11:00:00",
+        "frame_id": null,
+        "has_equipment": false,
+        "has_kit": false,
+        "has_motion": false,
+        "is_first": false
+      },
+      {
+        "index": 7,
+        "starts_at": "2026-10-08 11:20:00",
+        "frame_id": null,
+        "has_equipment": false,
+        "has_kit": false,
+        "has_motion": false,
+        "is_first": false
+      },
+      {
+        "index": 8,
+        "starts_at": "2026-10-08 11:40:00",
+        "frame_id": null,
+        "has_equipment": false,
+        "has_kit": false,
+        "has_motion": false,
+        "is_first": false
+      }
+    ]
+  },
+  "W05": {
+    "plan_date": "2026-10-09",
+    "work_id": "W05",
+    "slot_minutes": 20,
+    "slots": [
+      {
+        "index": 0,
+        "starts_at": "2026-10-09 09:00:00",
+        "frame_id": "W05_2026-10-09_09-00.jpg",
+        "has_equipment": true,
+        "has_kit": true,
+        "has_motion": false,
+        "is_first": true
+      },
+      {
+        "index": 1,
+        "starts_at": "2026-10-09 09:20:00",
+        "frame_id": "W05_2026-10-09_09-20.jpg",
+        "has_equipment": true,
+        "has_kit": true,
+        "has_motion": true,
+        "is_first": false
+      },
+      {
+        "index": 2,
+        "starts_at": "2026-10-09 09:40:00",
+        "frame_id": "W05_2026-10-09_09-40.jpg",
+        "has_equipment": true,
+        "has_kit": true,
+        "has_motion": true,
+        "is_first": false
+      },
+      {
+        "index": 3,
+        "starts_at": "2026-10-09 10:00:00",
+        "frame_id": "W05_2026-10-09_10-00.jpg",
+        "has_equipment": true,
+        "has_kit": true,
+        "has_motion": true,
+        "is_first": false
+      },
+      {
+        "index": 4,
+        "starts_at": "2026-10-09 10:20:00",
+        "frame_id": "W05_2026-10-09_10-20.jpg",
+        "has_equipment": true,
+        "has_kit": true,
+        "has_motion": true,
+        "is_first": false
+      },
+      {
+        "index": 5,
+        "starts_at": "2026-10-09 10:40:00",
+        "frame_id": "W05_2026-10-09_10-40.jpg",
+        "has_equipment": true,
+        "has_kit": true,
+        "has_motion": true,
+        "is_first": false
+      },
+      {
+        "index": 6,
+        "starts_at": "2026-10-09 11:00:00",
+        "frame_id": null,
+        "has_equipment": false,
+        "has_kit": false,
+        "has_motion": false,
+        "is_first": false
+      },
+      {
+        "index": 7,
+        "starts_at": "2026-10-09 11:20:00",
+        "frame_id": null,
+        "has_equipment": false,
+        "has_kit": false,
+        "has_motion": false,
+        "is_first": false
+      },
+      {
+        "index": 8,
+        "starts_at": "2026-10-09 11:40:00",
+        "frame_id": null,
+        "has_equipment": false,
+        "has_kit": false,
+        "has_motion": false,
+        "is_first": false
+      }
+    ]
+  },
+  "W06": {
+    "plan_date": "2026-10-10",
+    "work_id": "W06",
+    "slot_minutes": 20,
+    "slots": [
+      {
+        "index": 0,
+        "starts_at": "2026-10-10 09:00:00",
+        "frame_id": "W06_2026-10-10_09-00.jpg",
+        "has_equipment": true,
+        "has_kit": false,
+        "has_motion": false,
+        "is_first": true
+      },
+      {
+        "index": 1,
+        "starts_at": "2026-10-10 09:20:00",
+        "frame_id": "W06_2026-10-10_09-20.jpg",
+        "has_equipment": true,
+        "has_kit": false,
+        "has_motion": true,
+        "is_first": false
+      },
+      {
+        "index": 2,
+        "starts_at": "2026-10-10 09:40:00",
+        "frame_id": "W06_2026-10-10_09-40.jpg",
+        "has_equipment": true,
+        "has_kit": false,
+        "has_motion": true,
+        "is_first": false
+      },
+      {
+        "index": 3,
+        "starts_at": "2026-10-10 10:00:00",
+        "frame_id": "W06_2026-10-10_10-00.jpg",
+        "has_equipment": true,
+        "has_kit": false,
+        "has_motion": true,
+        "is_first": false
+      },
+      {
+        "index": 4,
+        "starts_at": "2026-10-10 10:20:00",
+        "frame_id": "W06_2026-10-10_10-20.jpg",
+        "has_equipment": true,
+        "has_kit": false,
+        "has_motion": true,
+        "is_first": false
+      },
+      {
+        "index": 5,
+        "starts_at": "2026-10-10 10:40:00",
+        "frame_id": "W06_2026-10-10_10-40.jpg",
+        "has_equipment": false,
+        "has_kit": false,
+        "has_motion": true,
+        "is_first": false
+      },
+      {
+        "index": 6,
+        "starts_at": "2026-10-10 11:00:00",
+        "frame_id": null,
+        "has_equipment": false,
+        "has_kit": false,
+        "has_motion": false,
+        "is_first": false
+      },
+      {
+        "index": 7,
+        "starts_at": "2026-10-10 11:20:00",
+        "frame_id": null,
+        "has_equipment": false,
+        "has_kit": false,
+        "has_motion": false,
+        "is_first": false
+      },
+      {
+        "index": 8,
+        "starts_at": "2026-10-10 11:40:00",
+        "frame_id": null,
+        "has_equipment": false,
+        "has_kit": false,
+        "has_motion": false,
+        "is_first": false
+      }
+    ]
+  },
+  "W07": {
+    "plan_date": "2026-10-11",
+    "work_id": "W07",
+    "slot_minutes": 20,
+    "slots": [
+      {
+        "index": 0,
+        "starts_at": "2026-10-11 09:00:00",
+        "frame_id": "W07_2026-10-11_09-00.jpg",
+        "has_equipment": true,
+        "has_kit": true,
+        "has_motion": false,
+        "is_first": true
+      },
+      {
+        "index": 1,
+        "starts_at": "2026-10-11 09:20:00",
+        "frame_id": "W07_2026-10-11_09-20.jpg",
+        "has_equipment": true,
+        "has_kit": true,
+        "has_motion": false,
+        "is_first": false
+      },
+      {
+        "index": 2,
+        "starts_at": "2026-10-11 09:40:00",
+        "frame_id": "W07_2026-10-11_09-40.jpg",
+        "has_equipment": true,
+        "has_kit": true,
+        "has_motion": true,
+        "is_first": false
+      },
+      {
+        "index": 3,
+        "starts_at": "2026-10-11 10:00:00",
+        "frame_id": "W07_2026-10-11_10-00.jpg",
+        "has_equipment": true,
+        "has_kit": true,
+        "has_motion": true,
+        "is_first": false
+      },
+      {
+        "index": 4,
+        "starts_at": "2026-10-11 10:20:00",
+        "frame_id": "W07_2026-10-11_10-20.jpg",
+        "has_equipment": true,
+        "has_kit": true,
+        "has_motion": true,
+        "is_first": false
+      },
+      {
+        "index": 5,
+        "starts_at": "2026-10-11 10:40:00",
+        "frame_id": "W07_2026-10-11_10-40.jpg",
+        "has_equipment": true,
+        "has_kit": true,
+        "has_motion": true,
+        "is_first": false
+      },
+      {
+        "index": 6,
+        "starts_at": "2026-10-11 11:00:00",
+        "frame_id": null,
+        "has_equipment": false,
+        "has_kit": false,
+        "has_motion": false,
+        "is_first": false
+      },
+      {
+        "index": 7,
+        "starts_at": "2026-10-11 11:20:00",
+        "frame_id": null,
+        "has_equipment": false,
+        "has_kit": false,
+        "has_motion": false,
+        "is_first": false
+      },
+      {
+        "index": 8,
+        "starts_at": "2026-10-11 11:40:00",
+        "frame_id": null,
+        "has_equipment": false,
+        "has_kit": false,
+        "has_motion": false,
+        "is_first": false
+      }
+    ]
+  }
+}

@@ -1,0 +1,33 @@
+# Источники данных проекта
+WORKBOOK_PATH=materials/ЛТЦ_строительная_история_8_работ.xlsx
+EQUIPMENT_RULES_PATH=config/equipment_rules_v3.json
+CALENDAR_PLAN_PATH=config/calendar_plan_new.json
+PHOTOS_PATH=data/photos_v2
+PROJECT_ID=EDU-DEMO-001
+
+# Провайдер мультимодальной модели: deepseek либо yandex
+VLM_PROVIDER=deepseek
+VLM_MAX_TOKENS=6000
+
+# DeepSeek — основная модель
+DEEPSEEK_API_KEY=<ключ-api-deepseek>
+DEEPSEEK_BASE_URL=https://api.deepseek.com
+DEEPSEEK_MODEL=deepseek-flash
+
+# Yandex Cloud AI Studio — запасная модель, нужна при VLM_PROVIDER=yandex
+YC_API_KEY=<api-ключ-сервисного-аккаунта>
+YC_FOLDER_ID=<идентификатор-каталога>
+YC_VLM_BASE_URL=https://ai.api.cloud.yandex.net/v1
+YC_VLM_MODEL=qwen3.6-35b-a3b
+
+# Пороги распознавания и правил
+DETECTOR_CONFIDENCE_THRESHOLD=0.05
+IDLE_STREAK_DAYS=3
+
+# Фасадные модели: пороги из рабочей конфигурации авторов
+FACADE_CELL_WEIGHTS_PATH=models/facade/weights/torchvision/facade_cells.pt
+BUILDING_WEIGHTS_PATH=models/facade/weights/torchvision/building.pt
+BARRIER_WEIGHTS_PATH=models/facade/weights/torchvision/barrier_resnet18.pt
+FACADE_CELL_THRESHOLD=0.35
+BUILDING_THRESHOLD=0.85
+BARRIER_THRESHOLD=0.94

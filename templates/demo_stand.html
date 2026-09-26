@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Контроль стройплощадки — демонстрационный стенд</title>
+<style>
+:root{
+  --bg:#f4f5f7; --panel:#ffffff; --ink:#15181d; --muted:#5d6672; --line:#dfe3e8;
+  --ok:#1f8a4c; --ok-bg:#e7f5ec; --warn:#b26a00; --warn-bg:#fdf1de; --bad:#c0392b; --bad-bg:#fbeceb;
+  --det:#2563eb; --det-bg:#e8effd; --vlm:#7c3aed; --vlm-bg:#f1eafd; --accent:#15181d;
+  --empty-slot:#ececec;
+}
+:root:not([data-theme="light"]){ }
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#14171c; --panel:#1c2026; --ink:#eceff3; --muted:#9aa4b2; --line:#2c323b;
+    --ok:#4ade80; --ok-bg:#16301f; --warn:#fbbf24; --warn-bg:#33270c; --bad:#f87171; --bad-bg:#3a1c1a;
+    --det:#7ba4ff; --det-bg:#16233d; --vlm:#c4a2ff; --vlm-bg:#241a3b; --accent:#eceff3;
+    --empty-slot:#262b33;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#14171c; --panel:#1c2026; --ink:#eceff3; --muted:#9aa4b2; --line:#2c323b;
+  --ok:#4ade80; --ok-bg:#16301f; --warn:#fbbf24; --warn-bg:#33270c; --bad:#f87171; --bad-bg:#3a1c1a;
+  --det:#7ba4ff; --det-bg:#16233d; --vlm:#c4a2ff; --vlm-bg:#241a3b; --accent:#eceff3;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:15px/1.5 "Inter","Segoe UI",system-ui,-apple-system,sans-serif}
+header{padding:18px 16px 0;max-width:1400px;margin:0 auto}
+h1{font-size:20px;margin:0 0 2px}
+.sub{color:var(--muted);font-size:13px;margin-bottom:14px}
+.tabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--line)}
+.tab{padding:9px 14px;border:none;background:none;color:var(--muted);font:inherit;font-size:14px;
+  cursor:pointer;border-bottom:2px solid transparent;border-radius:6px 6px 0 0}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent);font-weight:600}
+main{max-width:1400px;margin:0 auto;padding:16px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
+.view{display:none}
+.view.active{display:block}
+.grid{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(320px,1fr);gap:14px;align-items:start}
+@media (max-width:980px){.grid{grid-template-columns:1fr}}
+.stage-row{display:grid;grid-template-columns:minmax(180px,1.4fr) minmax(200px,2.2fr) 190px minmax(190px,1.2fr);
+  gap:12px;align-items:center;padding:9px 0;border-top:1px solid var(--line)}
+@media (max-width:900px){.stage-row{grid-template-columns:1fr;gap:5px}}
+.dates{font-size:13px;white-space:nowrap}
+.dates .k{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.03em}
+.comment{font-size:12px;color:var(--muted)}
+#sh-viewer.empty .viewgrid{display:none}
+.viewgrid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(280px,1fr);gap:14px;align-items:start}
+@media (max-width:900px){.viewgrid{grid-template-columns:1fr}}
+.hint{font-size:13px;color:var(--muted);margin:0}
+.stage-name{font-size:13px;font-weight:600}
+.stage-code{color:var(--muted);font-size:12px;font-weight:400}
+.bar{position:relative;height:30px;background:var(--bg);border-radius:6px;overflow:hidden}
+.bar-fill{position:absolute;top:0;bottom:0;border-radius:6px;opacity:.5}
+.tick{position:absolute;top:4px;width:12px;height:22px;border-radius:3px;border:none;cursor:pointer;padding:0}
+.tick:hover{outline:2px solid var(--accent)}
+.tick.current{outline:2px solid var(--accent)}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.ok{background:var(--ok-bg);color:var(--ok)} .warn{background:var(--warn-bg);color:var(--warn)}
+.bad{background:var(--bad-bg);color:var(--bad)}
+.det{background:var(--det-bg);color:var(--det)} .vlm{background:var(--vlm-bg);color:var(--vlm)}
+.stagegrid{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.kpi{flex:1 1 150px;background:var(--bg);border-radius:10px;padding:10px 12px}
+.kpi b{display:block;font-size:22px;line-height:1.2}
+.kpi span{color:var(--muted);font-size:12px}
+.stagewrap{position:relative;width:100%;background:#0d0f12;border-radius:10px;overflow:hidden}
+.stagewrap img{display:block;width:100%;height:auto}
+svg.overlay{position:absolute;inset:0;width:100%;height:100%}
+.controls{display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap}
+button.nav{font:inherit;padding:7px 14px;border-radius:8px;border:1px solid var(--line);
+  background:var(--panel);color:var(--ink);cursor:pointer}
+button.nav:hover{border-color:var(--accent)}
+input[type=range]{flex:1;min-width:160px;accent-color:var(--det)}
+label.toggle{display:flex;gap:6px;align-items:center;font-size:13px;color:var(--muted);cursor:pointer}
+.meta{font-size:13px}
+.meta div{margin-bottom:8px}
+.meta .k{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.03em}
+.card{border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:8px}
+.card.okline{border-left:3px solid var(--ok)} .card.badline{border-left:3px solid var(--bad)}
+ul.dev{margin:6px 0 0;padding-left:18px;font-size:13px}
+ul.dev li{margin-bottom:3px}
+.eq{display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:6px 0;border-top:1px dashed var(--line)}
+.eq:first-of-type{border-top:none}
+.just{color:var(--muted);font-size:12px;margin-top:2px}
+.strip{display:flex;gap:3px;margin:10px 0 0;flex-wrap:wrap}
+.strip button{width:26px;height:26px;border-radius:5px;border:1px solid transparent;cursor:pointer;
+  font-size:11px;color:#fff;font-weight:600}
+.strip button.current{border-color:var(--accent);transform:scale(1.12)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+.ganttwrap{overflow-x:auto;padding-bottom:6px}
+table.plan{border-collapse:collapse;font-size:13px;min-width:100%}
+table.plan th,table.plan td{border:1px solid var(--line);padding:0}
+table.plan thead th{padding:6px 8px;font-weight:600;font-size:12px;color:var(--muted);white-space:nowrap}
+table.plan th.worklabel{text-align:left;padding:8px 10px;min-width:280px;max-width:320px;font-weight:600;position:sticky;left:0;background:var(--panel);z-index:1}
+/* Цвет тот же, что у оранжевой полоски: строка про комплект и полоска про комплект. */
+.kit{display:block;margin-top:3px;font-weight:400;font-size:10px;line-height:1.3;color:var(--warn);white-space:normal}
+table.plan td.day{background:var(--bg);min-width:150px}
+table.plan td.day.busy{background:var(--panel)}
+table.plan td.total{padding:6px 10px;white-space:nowrap;color:var(--muted);font-size:12px}
+.minitrack{display:flex;gap:2px;padding:6px 8px}
+.slotbtn{width:14px;border:none;background:none;padding:0;cursor:pointer}
+.slotbtn:disabled{cursor:default;opacity:.45}
+.slotbox{border:1px solid transparent;border-radius:3px;padding:2px 1px;background:var(--empty-slot)}
+.slotbtn[aria-pressed="true"] .slotbox{outline:2px solid var(--accent);outline-offset:1px}
+.slotbox.counted{border-color:#1f6fd0;background:rgba(31,111,208,.2)}
+.stripe{height:4px;border-radius:1px;margin-bottom:2px;border:1px dashed var(--line);box-sizing:border-box}
+.stripe:last-child{margin-bottom:0}
+.stripe.on{border:none}
+.stripe.equipment.on{background:#e8b800}
+.stripe.kit.on{background:#e87b00}
+.stripe.motion.on{background:#2fa84f}
+tr.idle td{opacity:.5}
+.rolekind{display:block;font-size:11px;color:var(--muted)}
+.kitnote{margin:4px 0 10px;font-size:12px;line-height:1.4;color:var(--warn)}
+.shiftlegend{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--muted);margin:0 0 14px}
+.chip{display:inline-block;width:20px;height:9px;border-radius:2px;margin-right:6px;vertical-align:middle}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.03em}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:8px}
+p.note{font-size:13px;color:var(--muted);margin:8px 0 0}
+h2{font-size:16px;margin:0 0 10px}
+h3{font-size:14px;margin:16px 0 6px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Контроль строительной площадки по снимкам</h1>
+  <div class="sub" id="subtitle"></div>
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" data-view="shifts" aria-selected="true">Смены по слотам</button>
+    <button class="tab" role="tab" data-view="frames" aria-selected="false">Просмотр снимков</button>
+    <button class="tab" role="tab" data-view="models" aria-selected="false">Что нашли модели</button>
+    <button class="tab" role="tab" data-view="about" aria-selected="false">Что мы строим</button>
+  </div>
+</header>
+<main>
+  <section class="view active" id="view-shifts">
+    <div class="panel" id="sh-viewer">
+      <div class="viewgrid">
+        <div class="stagewrap">
+          <img id="sh-photo" alt="">
+          <svg class="overlay" id="sh-overlay" viewBox="0 0 1000 1000" preserveAspectRatio="none"></svg>
+        </div>
+        <div id="sh-caption"></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="shiftlegend">
+        <span><i class="chip" style="background:#e8b800"></i>техника на месте</span>
+        <span><i class="chip" style="background:#e87b00"></i>комплект собран за смену</span>
+        <span><i class="chip" style="background:#2fa84f"></i>техника работала</span>
+        <span><i class="chip" style="background:rgba(31,111,208,.6)"></i>слот засчитан</span>
+    <span>на фасадном этапе: здание · ячейки · изменение состава</span>
+      </div>
+      <div class="ganttwrap"><div id="shifts"></div></div>
+      <p class="hint">На фасадном этапе полоски меняют смысл: жёлтая — здание найдено,
+      оранжевая — ячейки фасада разобраны, зелёная — состав ячеек изменился с прошлым кадром.
+      Пайплайн по технике там не запускается вовсе. Синяя рамка на снимке — находка детектора,
+      подтверждённая арбитром; серая пунктирная — отклонённая. Виды работ идут сверху вниз, дни — слева направо, по одному дню на вид работ.
+      Внутри дня смена разбита на отрезки по 20 минут. Нажмите отрезок — снимок откроется вверху
+      страницы вместе с тем, что на нём нашли модели. Отрезок засчитан, когда собраны три полоски;
+      у первого снимка смены предыдущего кадра нет, поэтому там достаточно двух.</p>
+    </div>
+  </section>
+
+  <section class="view" id="view-frames">
+    <div class="grid">
+      <div class="panel">
+        <div class="stagewrap">
+          <img id="photo" alt="">
+          <svg class="overlay" id="overlay" viewBox="0 0 1000 1000" preserveAspectRatio="none"></svg>
+        </div>
+        <div class="controls">
+          <button class="nav" id="prev">← Назад</button>
+          <button class="nav" id="next">Вперёд →</button>
+          <input type="range" id="slider" min="0" value="0">
+          <label class="toggle"><input type="checkbox" id="boxes" checked> рамки детектора</label>
+        </div>
+        <div class="strip" id="strip"></div>
+        <p class="note">Стрелки ← → на клавиатуре листают снимки. Цвет квадрата — вердикт по этой контрольной дате.</p>
+      </div>
+      <div class="panel" id="details"></div>
+    </div>
+  </section>
+
+  <section class="view" id="view-models">
+    <div class="panel">
+      <h2>Что нашли модели на каждом снимке</h2>
+      <table id="modeltable"></table>
+      <p class="note">Источник «детектор» — RT-DETR, обученный на 17 классах строительной техники; находка подтверждается рамкой на снимке. Источник «VLM» — мультимодальная модель, отвечает на прямой вопрос о технике, которой в детекторе нет, и о том, работает ли она.</p>
+    </div>
+  </section>
+
+  <section class="view" id="view-about">
+    <div class="panel" id="about"></div>
+  </section>
+</main>
+<script id="payload" type="application/json">__DATA__</script>
+<script>
+const DATA = JSON.parse(document.getElementById('payload').textContent);
+const frames = [];
+DATA.stages.forEach((stage, si) => stage.frames.forEach(frame => frames.push({...frame, stage, stageIndex: si})));
+frames.sort((a, b) => a.captured_at.localeCompare(b.captured_at));
+let current = 0;
+
+const verdictClass = f => f.assessment.is_compliant ? 'ok' : (f.missing_mandatory ? 'bad' : 'warn');
+const verdictText = f => f.assessment.is_compliant ? 'подтверждён' : (f.missing_mandatory ? 'не подтверждён' : 'частично');
+const statusClass = s => s === 'подтверждён' ? 'ok' : (s === 'не подтверждён' ? 'bad' : 'warn');
+const colorOf = cls => getComputedStyle(document.documentElement).getPropertyValue('--' + cls).trim();
+const ru = iso => new Date(iso).toLocaleDateString('ru-RU', {day:'2-digit', month:'short', year:'numeric'});
+const esc = s => String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+
+document.getElementById('subtitle').textContent =
+  `${DATA.object} · проект ${DATA.project_id} · план ${ru(DATA.start)} — ${ru(DATA.finish)} · ${DATA.duration_days} дней · ${frames.length} снимков · сборка ${DATA.built_at}`;
+
+function renderStrip(){
+  document.getElementById('strip').innerHTML = frames.map((f, i) =>
+    `<button data-idx="${i}" class="${i === current ? 'current' : ''}" title="${esc(f.file)}"
+      style="background:${colorOf(verdictClass(f))}">${i + 1}</button>`).join('');
+  document.querySelectorAll('.strip button').forEach(b =>
+    b.addEventListener('click', () => show(Number(b.dataset.idx))));
+}
+
+function renderOverlayInto(frame, img, svg, visible){
+  const w = img.naturalWidth || 1000, h = img.naturalHeight || 1000;
+  svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+  if(!visible){ svg.innerHTML = ''; return; }
+  const size = Math.round(h / 28), parts = [];
+  frame.equipment.filter(e => e.source === 'detector').forEach(unit => {
+    (unit.rejected_boxes || []).forEach(box => {
+      const x1 = box[0] * w, y1 = box[1] * h, x2 = box[2] * w, y2 = box[3] * h;
+      parts.push(`<rect x="${x1}" y="${y1}" width="${Math.max(x2 - x1, 2)}" height="${Math.max(y2 - y1, 2)}"
+        fill="none" stroke="#9aa4b2" stroke-width="2" stroke-dasharray="8 6" vector-effect="non-scaling-stroke" rx="4"/>`);
+      parts.push(`<text x="${x1 + 4}" y="${y1 > size + 4 ? y1 - 5 : y1 + size + 4}" fill="#9aa4b2"
+        font-size="${size}" font-weight="700" style="paint-order:stroke;stroke:#0d0f12;stroke-width:5px">${esc(unit.machine_type)} — отклонено арбитром</text>`);
+    });
+    unit.boxes.forEach(box => {
+      const x1 = box[0] * w, y1 = box[1] * h, x2 = box[2] * w, y2 = box[3] * h;
+      parts.push(`<rect x="${x1}" y="${y1}" width="${Math.max(x2 - x1, 2)}" height="${Math.max(y2 - y1, 2)}"
+        fill="none" stroke="${colorOf('det')}" stroke-width="2.5" vector-effect="non-scaling-stroke" rx="4"/>`);
+      parts.push(`<text x="${x1 + 4}" y="${y1 > size + 4 ? y1 - 5 : y1 + size + 4}" fill="${colorOf('det')}"
+        font-size="${size}" font-weight="700" style="paint-order:stroke;stroke:#0d0f12;stroke-width:5px">${esc(unit.machine_type)} ${(unit.confidence || 0).toFixed(2)}</text>`);
+    });
+  });
+  svg.innerHTML = parts.join('');
+}
+
+function renderOverlay(frame, visible){
+  renderOverlayInto(frame, document.getElementById('photo'), document.getElementById('overlay'), visible);
+}
+
+function renderDetails(frame){
+  const stage = frame.stage;
+  const eq = frame.equipment.length ? frame.equipment.map(unit => `
+    <div class="eq"><div><b>${esc(unit.machine_type)}</b> ×${unit.count}${(unit.rejected_boxes || []).length ? ` · отклонено рамок: ${unit.rejected_boxes.length}` : ''}
+      <div class="just">${esc(unit.status)}${unit.justification ? ' · ' + esc(unit.justification) : ''}</div></div>
+      <div><span class="pill ${unit.source === 'detector' ? 'det' : 'vlm'}">${unit.source === 'detector' ? 'детектор ' + (unit.confidence || 0).toFixed(2) : 'VLM'}</span></div>
+    </div>`).join('') : '<p class="note">Модели не нашли на снимке ни одной единицы техники.</p>';
+  const dev = frame.assessment.deviations.length
+    ? `<ul class="dev">${frame.assessment.deviations.map(d => `<li>${esc(d.description)}</li>`).join('')}</ul>`
+    : '<p class="note">Отклонений нет.</p>';
+  document.getElementById('details').innerHTML = `
+    <div class="meta">
+      <div><div class="k">Снимок ${current + 1} из ${frames.length}</div><b>${esc(frame.file)}</b></div>
+      <div><div class="k">Дата съёмки (EXIF)</div>${esc(frame.captured_at)}</div>
+      <div><div class="k">Попадает в пункт плана</div><b>${esc(stage.short_name)}</b>
+        <div class="just">${esc(stage.full_name)}</div>
+        <div class="just">${ru(stage.start)} — ${ru(stage.finish)} · статус пункта:
+          <span class="pill ${statusClass(stage.status)}">${stage.status}</span></div></div>
+      <div><div class="k">Почему отнесён к этому этапу</div>${esc(frame.note)}</div>
+    </div>
+    <div class="card"><div class="k">Что нашли модели</div>${eq}</div>
+    <div class="card ${frame.assessment.is_compliant ? 'okline' : 'badline'}">
+      <div class="k">Вердикт контрольной даты</div>
+      <span class="pill ${verdictClass(frame)}">${verdictText(frame)}</span>
+      ${frame.assessment.confirmed_equipment.length ? `<p class="note">Подтверждено: ${frame.assessment.confirmed_equipment.map(esc).join(', ')}</p>` : ''}
+      ${dev}
+    </div>`;
+}
+
+function show(index){
+  current = (index + frames.length) % frames.length;
+  const frame = frames[current];
+  const img = document.getElementById('photo');
+  img.onload = () => renderOverlay(frame, document.getElementById('boxes').checked);
+  img.src = DATA.images[frame.file];
+  img.alt = frame.note;
+  document.getElementById('slider').value = current;
+  renderOverlay(frame, document.getElementById('boxes').checked);
+  renderDetails(frame);
+  renderStrip();
+}
+
+function renderModels(){
+  const rows = frames.map((f, i) => {
+    const det = f.equipment.filter(e => e.source === 'detector')
+      .map(e => `${esc(e.machine_type)} ×${e.count} (${(e.confidence || 0).toFixed(2)})`).join('<br>') || '—';
+    const vlm = f.equipment.filter(e => e.source === 'vlm')
+      .map(e => `${esc(e.machine_type)} — ${esc(e.status)}`).join('<br>') || '—';
+    return `<tr><td>${i + 1}</td><td>${esc(f.captured_at.split(' ')[0])}</td><td>${esc(f.stage.short_name)}</td>
+      <td>${det}</td><td>${vlm}</td><td><span class="pill ${verdictClass(f)}">${verdictText(f)}</span></td></tr>`;
+  }).join('');
+  document.getElementById('modeltable').innerHTML =
+    `<thead><tr><th>№</th><th>Дата</th><th>Пункт плана</th><th>Детектор</th><th>VLM</th><th>Вердикт</th></tr></thead><tbody>${rows}</tbody>`;
+}
+
+const STRIPE_TITLES = {equipment:'техника на месте', kit:'комплект собран за смену', motion:'техника работала'};
+
+function slotTime(value){ return value.slice(11, 16); }
+
+function dayLabel(iso){
+  const parts = iso.split('-');
+  return parts[2] + '.' + parts[1];
+}
+
+function slotButtonHtml(shift, slot, idx){
+  const stripes = ['equipment','kit','motion']
+    .map(name => `<div class="stripe ${name}${slot['has_' + name] ? ' on' : ''}"></div>`).join('');
+  const hint = slot.frame_id
+    ? `${slotTime(slot.starts_at)} — ${slot.is_counted ? 'засчитан' : 'не засчитан'}`
+    : `${slotTime(slot.starts_at)} — снимка не пришло`;
+  return `<button class="slotbtn" data-work="${esc(shift.work_id)}" data-slot="${idx}"
+    aria-pressed="false" ${slot.frame_id ? '' : 'disabled'} title="${esc(hint)}">
+    <div class="slotbox${slot.is_counted ? ' counted' : ''}">${stripes}</div></button>`;
+}
+
+function renderShifts(){
+  const host = document.getElementById('shifts');
+  if(!DATA.shifts || !DATA.shifts.length){ host.innerHTML = '<p class="note">Смены не посчитаны.</p>'; return; }
+  const days = DATA.shifts.map(shift => shift.plan_date).sort();
+  const head = days.map(day => `<th>${dayLabel(day)}</th>`).join('');
+  const rows = DATA.shifts.map(shift => {
+    const counted = shift.slots.filter(s => s.is_counted).length;
+    const minutes = counted * shift.slot_minutes;
+    const planned = shift.slots.length * shift.slot_minutes;
+    const track = shift.slots.map((slot, idx) => slotButtonHtml(shift, slot, idx)).join('');
+    const cells = days.map(day => day === shift.plan_date
+      ? `<td class="day busy"><div class="minitrack">${track}</div></td>`
+      : '<td class="day"></td>').join('');
+    const badge = counted > 0
+      ? '<span class="pill ok">по графику</span>'
+      : '<span class="pill bad">не подтверждён</span>';
+    return `<tr><th class="worklabel">${esc(shift.work_id)} · ${esc(shift.work_name.split(' → ').pop())}
+      <span class="kit">${esc(shift.kit || '')}</span></th>
+      ${cells}<td class="total">${badge} ${minutes} из ${planned} мин</td></tr>`;
+  }).join('');
+  host.innerHTML = `<table class="plan"><thead><tr><th class="worklabel">Вид работ</th>${head}<th>Засчитано</th></tr></thead><tbody>${rows}</tbody></table>`;
+  host.querySelectorAll('.slotbtn').forEach(button => button.addEventListener('click', () => openSlot(button)));
+}
+
+function facadeShareHtml(reading){
+  const share = key => reading.cells_total ? Math.round(100 * reading[key] / reading.cells_total) : 0;
+  return `<table><thead><tr><th>Стадия ячеек фасада</th><th>Ячеек</th><th>Доля</th></tr></thead><tbody>
+    <tr><td>монолит — проём открыт</td><td>${reading.monolith}</td><td>${share('monolith')}%</td></tr>
+    <tr><td>блок — проём заложен</td><td>${reading.block}</td><td>${share('block')}%</td></tr>
+    <tr><td>окно — проём остеклён</td><td>${reading.window}</td><td>${share('window')}%</td></tr>
+    <tr><td><b>всего разобрано</b></td><td><b>${reading.cells_total}</b></td><td></td></tr>
+    </tbody></table>
+    <p class="note">На снимке: синяя рамка — здание, красная — монолит, жёлтая — блок,
+    зелёная — окно. Здание найдено с уверенностью ${reading.building_score.toFixed(2)}.
+    Ограждения проверены на ${reading.barrier_checked} пустых проёмах выше нижнего ряда,
+    нарушений ОТиПБ — <b>${reading.barrier_violations}</b>.</p>`;
+}
+
+const CELL_COLORS = {'монолит': '#e5484d', 'блок': '#e8b800', 'окно': '#2fa84f'};
+
+function renderFacadeOverlay(reading, img, svg){
+  const w = img.naturalWidth || 1000, h = img.naturalHeight || 1000;
+  svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+  if(!reading){ svg.innerHTML = ''; return; }
+  const box = reading.building_box;
+  const parts = [`<rect x="${box[0] * w}" y="${box[1] * h}" width="${(box[2] - box[0]) * w}"
+    height="${(box[3] - box[1]) * h}" fill="none" stroke="${colorOf('det')}" stroke-width="3"
+    vector-effect="non-scaling-stroke" rx="4"/>`];
+  reading.cells.forEach(cell => {
+    const c = cell.box;
+    parts.push(`<rect x="${c[0] * w}" y="${c[1] * h}" width="${Math.max((c[2] - c[0]) * w, 2)}"
+      height="${Math.max((c[3] - c[1]) * h, 2)}" fill="none" stroke="${CELL_COLORS[cell.kind] || '#888'}"
+      stroke-width="2" vector-effect="non-scaling-stroke" rx="2"/>`);
+  });
+  svg.innerHTML = parts.join('');
+}
+
+function slotEquipmentHtml(details){
+  if(details && details.facade !== undefined){
+    return details.facade ? facadeShareHtml(details.facade)
+      : '<p class="note">Здание на снимке не найдено, разобрать фасад не по чему.</p>';
+  }
+  if(!details || !details.equipment || !details.equipment.length){ return '<p class="note">Техника на снимке не найдена.</p>'; }
+  const rows = details.equipment.map(item => {
+    const role = item.role;
+    const label = role
+      ? `${esc(role.position)}${role.lead ? ' · ведущая' : ''}<span class="rolekind">${esc(role.kind.replace('_', ' '))}</span>`
+      : '<span class="comment">в правилах этапа не участвует</span>';
+    return `<tr class="${role ? '' : 'idle'}"><td>${esc(item.machine_type)}</td>
+      <td><span class="pill ${item.source === 'detector' ? 'det' : 'vlm'}">${item.source === 'detector' ? 'детектор' : 'VLM'}</span></td>
+      <td>${esc(item.status)}</td><td>${label}</td></tr>`;
+  }).join('');
+  return `<table><thead><tr><th>Что нашли</th><th>Источник</th><th>Состояние</th><th>Роль в правилах этапа</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+function slotMotionHtml(slot, details){
+  if(slot.is_first){ return '<p class="note">Первый снимок смены: предыдущего кадра нет, сравнивать не с чем, поэтому отрезку достаточно двух полосок.</p>'; }
+  if(details && details.facade !== undefined){
+    return slot.has_motion
+      ? '<p class="note"><b>Состав ячеек изменился</b> по сравнению с предыдущим кадром: проёмы заложили или застеклили.</p>'
+      : '<p class="note">Состав ячеек по сравнению с предыдущим кадром не изменился.</p>';
+  }
+  const motion = details && details.motion;
+  if(!motion){ return '<p class="note">Сравнение с соседним кадром не выполнялось.</p>'; }
+  const signs = [motion.moved ? 'машина сместилась' : null,
+                 motion.working_body_changed ? 'рабочий орган сменил положение' : null,
+                 motion.operator_present ? 'виден оператор' : null].filter(Boolean);
+  const verdict = signs.length ? signs.join(', ') : 'признаков работы между кадрами нет';
+  return `<p class="note"><b>Движение относительно предыдущего кадра:</b> ${esc(verdict)}.<br>${esc(motion.justification || '')}</p>`;
+}
+
+function openSlot(button){
+  const shift = DATA.shifts.find(s => s.work_id === button.dataset.work);
+  const slot = shift.slots[Number(button.dataset.slot)];
+  if(!slot.frame_id){ return; }
+  document.querySelectorAll('.slotbtn').forEach(other => other.setAttribute('aria-pressed', String(other === button)));
+  const photo = document.getElementById('sh-photo');
+  const overlay = document.getElementById('sh-overlay');
+  const reading = slot.details && slot.details.facade;
+  const found = {equipment: (slot.details && slot.details.equipment) || []};
+  const draw = () => slot.details && slot.details.facade !== undefined
+    ? renderFacadeOverlay(reading, photo, overlay)
+    : renderOverlayInto(found, photo, overlay, true);
+  photo.onload = draw;
+  photo.src = DATA.images[slot.frame_id] || '';
+  draw();
+  const stripes = ['equipment','kit','motion'].filter(name => slot['has_' + name]).map(name => STRIPE_TITLES[name]);
+  document.getElementById('sh-caption').innerHTML =
+    `<h2>${esc(shift.work_id)} · ${slotTime(slot.starts_at)}</h2>
+     <p class="note">${esc(slot.frame_id)}</p>
+     <p class="kitnote">${esc(shift.kit || '')}</p>
+     <p>${slot.is_counted ? '<span class="pill ok">слот засчитан</span>' : '<span class="pill warn">слот не засчитан</span>'}
+     ${stripes.length ? ' — ' + esc(stripes.join(', ')) : ' — ни одной полоски'}</p>
+     ${slotEquipmentHtml(slot.details)}
+     ${slotMotionHtml(slot, slot.details)}`;
+  document.getElementById('sh-viewer').classList.remove('empty');
+}
+
+function renderAbout(){ document.getElementById('about').innerHTML = DATA.about; }
+
+function switchView(name){
+  document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + name));
+  document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.view === name)));
+}
+
+document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => switchView(t.dataset.view)));
+document.getElementById('prev').addEventListener('click', () => show(current - 1));
+document.getElementById('next').addEventListener('click', () => show(current + 1));
+document.getElementById('slider').addEventListener('input', e => show(Number(e.target.value)));
+document.getElementById('boxes').addEventListener('change', e => renderOverlay(frames[current], e.target.checked));
+document.addEventListener('keydown', e => {
+  if(e.key === 'ArrowLeft'){ show(current - 1); }
+  if(e.key === 'ArrowRight'){ show(current + 1); }
+});
+
+document.getElementById('slider').max = String(frames.length - 1);
+document.getElementById('sh-viewer').classList.add('empty');
+renderModels(); renderAbout(); renderShifts(); show(0);
+</script>
+</body>
+</html>

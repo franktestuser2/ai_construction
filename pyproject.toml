@@ -1,0 +1,38 @@
+[project]
+name = "site-monitoring"
+version = "0.1.0"
+description = "Сервис поиска нарушений на строительных площадках по снимкам камер"
+requires-python = "^3.12"
+
+[tool.poetry]
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.12"
+pydantic = "^2.11.3"
+pydantic-settings = "^2.9.1"
+fastapi = "^0.115.0"
+uvicorn = { extras = ["standard"], version = "^0.34.0" }
+httpx = "^0.28.1"
+
+# ML-часть: дообученный детектор техники RT-DETR. Пакеты вне таблицы §1
+# agent_brief.md — они неизбежны, распознавание техники требуется по ТЗ.
+torch = "^2.14.0"
+torchvision = "^0.29.0"
+transformers = "^5.17.0"
+pillow = "^12.3.0"
+numpy = "^2.5.2"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.5"
+# Только для замера качества перенесённых фасадных детекторов на разметке COCO,
+# в рантайме сервиса не участвует.
+pycocotools = "^2.0.11"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[build-system]
+requires = ["poetry-core>=1.9.0"]
+build-backend = "poetry.core.masonry.api"

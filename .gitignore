@@ -1,0 +1,32 @@
+# Тяжёлые исходные материалы — в git не кладём (лимит GitHub 100 МБ на файл)
+materials/*.zip
+materials/*.pptx
+
+# Веса и артефакты модели RT-DETR (1.3 ГБ) — только локально
+models/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+
+# Секреты и окружение
+.env
+*.env
+!env_example
+
+# IDE и ОС
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Собранные страницы стендов — артефакты сборки, пересобираются скриптами
+docs/*.html
+
+# Резервные копии и внешние репозитории, подключаемые отдельно
+backup_*.zip
+materials/external/
