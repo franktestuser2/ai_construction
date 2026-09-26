@@ -28,7 +28,7 @@ STYLE = """
 *,*::before,*::after{box-sizing:border-box}
 body{margin:0;padding:28px 16px;background:var(--bg);color:var(--ink);
      font:15px/1.55 -apple-system,"Segoe UI",Roboto,sans-serif}
-.wrap{max-width:900px;margin:0 auto}
+.wrap{max-width:1120px;margin:0 auto}
 h1{font-size:23px;margin:0 0 4px}
 h2{font-size:17px;margin:0 0 10px}
 .sub{color:var(--muted);margin:0 0 22px}
@@ -60,7 +60,7 @@ th{color:var(--muted);font-weight:600;font-size:12px}
             border-radius:0 8px 8px 0;padding:12px 14px;margin-top:12px}
 .share{height:8px;border-radius:4px;background:var(--bg);overflow:hidden;min-width:90px}
 .share i{display:block;height:100%;background:var(--accent)}
-header{max-width:900px;margin:0 auto 20px}
+header{max-width:1120px;margin:0 auto 20px}
 header .brand{font-size:13px;color:var(--muted);letter-spacing:.02em;margin-bottom:10px}
 nav{display:flex;gap:2px;flex-wrap:wrap;border-bottom:1px solid var(--line)}
 nav a{padding:9px 14px;font-size:14px;color:var(--muted);text-decoration:none;
@@ -330,11 +330,11 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
 """
 
 CHART_STYLE = """
-.hero{display:grid;grid-template-columns:auto 1fr;gap:6px 24px;align-items:end}
+.hero{display:grid;grid-template-columns:auto 1fr;gap:6px 24px;align-items:end;padding:22px 24px}
 .heronum{grid-column:1/-1;display:flex;align-items:baseline;gap:18px;flex-wrap:wrap}
 .verdict{font-size:30px;font-weight:700;margin:0;letter-spacing:-.01em}
 .verdict.delayed{color:var(--bad)} .verdict.ok{color:var(--ok)}
-.heroshare{font-size:52px;font-weight:700;margin:0;line-height:1;letter-spacing:-.02em}
+.heroshare{font-size:60px;font-weight:700;margin:0;line-height:1;letter-spacing:-.02em}
 .heroshare span{font-size:15px;font-weight:600;color:var(--muted);margin-left:8px;letter-spacing:0}
 .meter{grid-column:1/-1;height:12px;border-radius:6px;background:var(--track);overflow:hidden;margin:14px 0 4px}
 .meter i{display:block;height:100%;border-radius:6px;background:var(--done)}
@@ -347,10 +347,10 @@ CHART_STYLE = """
 .sw{display:inline-block;width:14px;height:14px;border-radius:4px;margin-right:6px;vertical-align:-2px}
 .sw.done{background:var(--done)} .sw.miss{background:var(--miss)} .sw.blind{background:var(--blind)}
 .bars{display:flex;flex-direction:column;gap:14px}
-.barrow{display:grid;grid-template-columns:minmax(150px,230px) 1fr auto;gap:12px;align-items:center}
+.barrow{display:grid;grid-template-columns:minmax(180px,300px) 1fr auto;gap:16px;align-items:center}
 .barname{font-size:13px;line-height:1.3}
 .barname span{display:block;color:var(--muted);font-size:11px}
-.stack{display:flex;gap:2px;height:22px}
+.stack{display:flex;gap:2px;height:26px}
 .seg{height:100%;min-width:2px}
 .seg:first-child{border-radius:5px 0 0 5px} .seg:last-child{border-radius:0 5px 5px 0}
 .seg.only{border-radius:5px}

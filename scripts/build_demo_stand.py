@@ -1,40 +1,30 @@
-"""Собирает демонстрационный стенд: одну самодостаточную HTML-страницу.
+"""Собирает страницу смен по слотам для демонстрационного набора.
 
-Страница читает результаты прогона из кеша и показывает план, снимки с рамками
-детектора, ответы VLM и вердикт по каждой контрольной дате.
+Сама сборка живёт в сервисе: ту же страницу он строит и по данным пользователя
+после прогона. Здесь только источники демонстрации.
 """
 
 import json
-from datetime import datetime
+import logging
+import sys
 from pathlib import Path
 
-from PIL import Image
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-CACHE_PATH = Path("data/cache/demo_v2_observations.json")
-PHOTOS_DIR = Path("data/photos_v2")
-SHIFT_TIMELINES_PATH = Path("data/cache/shift_timelines.json")
+from report_stand import StandBuilder, StandSources  # noqa: E402
+
+logging.basicConfig(level=logging.INFO, format="%(message)s")
+logger = logging.getLogger(__name__)
+
+FRAMES_CACHE_PATH = Path("data/cache/demo_v2_observations.json")
+FRAMES_PHOTOS_DIR = Path("data/photos_v2")
+TIMELINES_PATH = Path("data/cache/shift_timelines.json")
+OBSERVATIONS_PATH = Path("data/cache/shift_observations.json")
 SUMMARY_PATH = Path("data/cache/plan_fact_summary.json")
-SHIFT_OBSERVATIONS_PATH = Path("data/cache/shift_observations.json")
 SLOT_PHOTOS_DIR = Path("data/photos_slots")
-SLOT_MANIFEST_PATH = SLOT_PHOTOS_DIR / "manifest.json"
 PLAN_PATH = Path("config/calendar_plan_new.json")
-RULES_PATH = Path("config/equipment_rules_v3.json")
-SLOT_PREVIEW_WIDTH = 1000
-SLOT_PREVIEW_QUALITY = 74
-FIRST_SLOT_STRIPES = 2
-WORK_EVIDENCE_KIND = "признак_работ"
-FACADE_CHECK_KEY = "facade_check"
-FULL_STRIPES = 3
-TEMPLATE_PATH = Path("templates/demo_stand.html")
 OUTPUT_DIR = Path("docs/stand")
-OUTPUT_PATH = OUTPUT_DIR / "index.html"
-PHOTOS_OUT_DIR = OUTPUT_DIR / "photos"
-PHOTO_URL_TEMPLATE = "/demo/photos/{name}"
-DATA_PLACEHOLDER = "__DATA__"
-PREVIEW_WIDTH = 1280
-PREVIEW_QUALITY = 78
-
-BUILD_STAMP_FORMAT = "%d.%m.%Y %H:%M"
+PHOTO_URL_PREFIX = "/demo/photos/"
 
 ABOUT_HTML = """
 <h2>Что мы строим</h2>
@@ -68,226 +58,34 @@ ABOUT_HTML = """
 """
 
 
-def save_photo(path: Path, name: str, width_limit: int = PREVIEW_WIDTH, quality: int = PREVIEW_QUALITY) -> str:
-    """Кладёт уменьшенную копию снимка рядом со страницей и возвращает её адрес.
-
-    Снимки вынесены из страницы наружу: встроенные в текст, они раздували её до
-    четырнадцати мегабайт, и браузер разбирал такую страницу мучительно долго.
-    Отдельными файлами они грузятся по мере надобности.
-    """
-    image = Image.open(path).convert("RGB")
-    width, height = image.size
-    if width > width_limit:
-        image = image.resize((width_limit, round(height * width_limit / width)))
-    PHOTOS_OUT_DIR.mkdir(parents=True, exist_ok=True)
-    image.save(PHOTOS_OUT_DIR / name, format="JPEG", quality=quality)
-    return PHOTO_URL_TEMPLATE.format(name=name)
-
-
-def collect_images(payload: dict[str, object]) -> dict[str, str]:
-    """Собирает встраиваемые копии всех снимков прогона."""
-    images: dict[str, str] = {}
-    for stage in payload["stages"]:  # type: ignore[index]
-        for frame in stage["frames"]:
-            path = PHOTOS_DIR / stage["work_id"] / frame["file"]
-            images[frame["file"]] = save_photo(path, frame["file"])
-    return images
-
-
-def is_slot_counted(slot: dict[str, object]) -> bool:
-    """Повторяет правило зачёта: три полоски, у первого слота достаточно двух.
-
-    Отрезок, по которому фронт работ не виден, не засчитывается ни при каких
-    полосках: такой участок вне контроля ИИ и требует ручной проверки.
-    """
-    if slot["frame_id"] is None or slot.get("limited_view"):
-        return False
-    stripes = [slot["has_equipment"], slot["has_kit"], slot["has_motion"]]
-    required = FIRST_SLOT_STRIPES if slot["is_first"] else FULL_STRIPES
-    counted = sum(1 for value in stripes[:required] if value) == required
-    return counted
-
-
-def _work_names() -> dict[str, str]:
+def work_names() -> dict[str, str]:
     """Читает названия видов работ из календарного плана."""
     plan = json.loads(PLAN_PATH.read_text(encoding="utf-8"))
     names = {str(stage["work_id"]): str(stage["full_name"]) for stage in plan["stages"]}
     return names
 
 
-def _position_index(work_id: str) -> dict[str, dict[str, str]]:
-    """Собирает соответствие «что нашли → какую позицию правил это закрывает».
-
-    Нужно показу: детектор находит на кадре и то, чего в правилах этапа нет вовсе,
-    и без пометки такие находки выглядят как часть вердикта.
-    """
-    rules = json.loads(RULES_PATH.read_text(encoding="utf-8"))
-    work = next((item for item in rules["works"] if item["work_id"] == work_id), None)
-    index: dict[str, dict[str, str]] = {}
-    for position in work["positions"] if work else []:
-        role = {"position": position["position"], "kind": position["kind"], "lead": position.get("lead", False)}
-        for alternative in position["alternatives"]:
-            names = alternative.get("detector_classes") or [alternative["machine_type"]]
-            for name in names:
-                index[name] = role
-    return index
-
-
-KIT_TEMPLATE = "Необходимые машины для производства работ: {machines}"
-FACADE_KIT_TEXT = (
-    "Техника на этом этапе не проверяется: работает фасадный пайплайн — "
-    "детектор зданий, разбор фасада на ячейки и проверка ограждений"
-)
-LEAD_MARK = " (ведущая)"
-
-
-def _kit_text(work_id: str) -> str:
-    """Составляет строку о том, какие машины нужны для производства этих работ."""
-    rules = json.loads(RULES_PATH.read_text(encoding="utf-8"))
-    work = next((item for item in rules["works"] if item["work_id"] == work_id), None)
-    if work is None:
-        return ""
-    if work.get(FACADE_CHECK_KEY):
-        return FACADE_KIT_TEXT
-    machines = [
-        f"{position['position']}{LEAD_MARK if position.get('lead') else ''}"
-        for position in work["positions"]
-        if position["kind"] != WORK_EVIDENCE_KIND
-    ]
-    text = KIT_TEMPLATE.format(machines=", ".join(machines).lower())
-    return text
-
-
-def _frame_details(observations: dict[str, object], work_id: str) -> dict[str, dict[str, object]]:
-    """Собирает по каждому кадру смены находки техники и обоснование движения."""
-    stored = observations.get(work_id)
-    if stored is None:
-        return {}
-    facade = stored.get("facade") or []
-    if facade:
-        return _facade_details(stored, facade)  # type: ignore[arg-type]
-    motions = stored["motions"]  # type: ignore[index]
-    roles = _position_index(work_id)
-    details: dict[str, dict[str, object]] = {}
-    for index, item in enumerate(stored["observations"]):  # type: ignore[index]
-        motion = motions[index] if index < len(motions) else None
-        for unit in item["equipment"]:
-            unit["role"] = roles.get(unit["machine_type"])
-        details[item["frame_id"]] = {
-            "equipment": item["equipment"],
-            "motion": motion,
-        }
-    return details
-
-
-def _facade_details(stored: dict[str, object], facade: list) -> dict[str, dict[str, object]]:
-    """Собирает разбор фасада по кадрам смены.
-
-    Рамки приходят уже в долях кадра, пересчитывать их не нужно.
-    """
-    frame_ids = stored.get("frame_ids") or []
-    details: dict[str, dict[str, object]] = {}
-    for index, frame_id in enumerate(frame_ids):  # type: ignore[union-attr]
-        reading = facade[index] if index < len(facade) else None
-        details[str(frame_id)] = {"facade": reading}
-    return details
-
-
-def collect_shifts() -> tuple[list[dict[str, object]], dict[str, str]]:
-    """Собирает ленты смен, снимки слотов и пояснения к ним."""
-    if not SHIFT_TIMELINES_PATH.exists():
-        return [], {}
-    timelines = json.loads(SHIFT_TIMELINES_PATH.read_text(encoding="utf-8"))
-    observations = json.loads(SHIFT_OBSERVATIONS_PATH.read_text(encoding="utf-8"))
-    names = _work_names()
-    shifts: list[dict[str, object]] = []
-    images: dict[str, str] = {}
-    for work_id, timeline in sorted(timelines.items()):
-        details = _frame_details(observations, work_id)
-        for slot in timeline["slots"]:
-            slot["is_counted"] = is_slot_counted(slot)
-            slot["details"] = details.get(slot["frame_id"])
-            if slot["frame_id"] is not None:
-                path = SLOT_PHOTOS_DIR / work_id / slot["frame_id"]
-                images[slot["frame_id"]] = save_photo(
-                    path, slot["frame_id"], SLOT_PREVIEW_WIDTH, SLOT_PREVIEW_QUALITY
-                )
-        timeline["work_name"] = names.get(work_id, work_id)
-        timeline["kit"] = _kit_text(work_id)
-        shifts.append(timeline)
-    return shifts, images
-
-
-def _foreign_count(work_id: str) -> int:
-    """Считает отрезки, где на кадре нашлась техника не по этапу."""
-    payload = json.loads(SHIFT_TIMELINES_PATH.read_text(encoding="utf-8"))
-    slots = payload.get(work_id, {}).get("slots", [])
-    found = sum(1 for slot in slots if slot.get("foreign_equipment"))
-    return found
-
-
-def build_dashboard() -> dict[str, object]:
-    """Считает сводку план-факта и подбирает заключение модели для показа."""
-    import sys
-
-    sys.path.insert(0, "src")
-    from config import Settings
-    from site_monitoring.adapters.shift_timeline_reader import ShiftTimelineReader
-    from site_monitoring.services.plan_fact_report import build_report
-
-    settings = Settings()
-    titles = _work_names()
-    timelines = ShiftTimelineReader(SHIFT_TIMELINES_PATH).read_timelines()
-    report = build_report(timelines, {k: v.split(" → ")[-1] for k, v in titles.items()}, settings.slots_per_shift)
-    conclusion = json.loads(SUMMARY_PATH.read_text(encoding="utf-8")) if SUMMARY_PATH.exists() else {}
-    payload = {
-        "status": report.status.value,
-        "completion": round(report.completion * 100),
-        "counted": report.counted_slots,
-        "measured": report.measured_slots,
-        "planned": report.planned_slots,
-        "limited": report.limited_slots,
-        "foreign": sum(_foreign_count(stage.work_id) for stage in report.stages),
-        "lag_days": report.lag_days,
-        "slot_minutes": settings.slot_minutes,
-        "slots_per_shift": settings.slots_per_shift,
-        "conclusion": conclusion,
-        "stages": [
-            {
-                "work_id": stage.work_id,
-                "title": stage.title,
-                "plan_date": stage.plan_date,
-                "planned": stage.planned_slots,
-                "measured": stage.measured_slots,
-                "counted": stage.counted_slots,
-                "limited": stage.limited_slots,
-                "foreign": _foreign_count(stage.work_id),
-                "completion": round(stage.completion * 100),
-                "status": stage.status.value,
-            }
-            for stage in report.stages
-        ],
-    }
-    return payload
-
-
-def main() -> None:
-    """Записывает страницу стенда на диск."""
-    payload = json.loads(CACHE_PATH.read_text(encoding="utf-8"))
-    shifts, slot_images = collect_shifts()
-    payload["shifts"] = shifts
-    payload["dashboard"] = build_dashboard()
-    payload["images"] = collect_images(payload) | slot_images
-    payload["about"] = ABOUT_HTML
-    payload["built_at"] = datetime.now().strftime(BUILD_STAMP_FORMAT)
-    template = TEMPLATE_PATH.read_text(encoding="utf-8")
-    serialized = json.dumps(payload, ensure_ascii=False).replace("</", "<\\/")
-    page = template.replace(DATA_PLACEHOLDER, serialized)
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    OUTPUT_PATH.write_text(page, encoding="utf-8")
-    size_mb = OUTPUT_PATH.stat().st_size / 1024 / 1024
-    print(f"Стенд собран: {OUTPUT_PATH} ({size_mb:.1f} МБ)")
+def main() -> int:
+    """Собирает демонстрационную страницу смен."""
+    frames = json.loads(FRAMES_CACHE_PATH.read_text(encoding="utf-8"))
+    sources = StandSources(
+        timelines_path=TIMELINES_PATH,
+        observations_path=OBSERVATIONS_PATH,
+        photos_dir=SLOT_PHOTOS_DIR,
+        titles=work_names(),
+        output_dir=OUTPUT_DIR,
+        photo_url_prefix=PHOTO_URL_PREFIX,
+        photos_by_work=True,
+        summary_path=SUMMARY_PATH,
+        about_html=ABOUT_HTML,
+        frames_payload=frames,
+        frames_photos_dir=FRAMES_PHOTOS_DIR,
+    )
+    target = StandBuilder(sources).build()
+    size_mb = target.stat().st_size / 1024 / 1024
+    logger.info("Стенд собран: %s (%.1f МБ)", target, size_mb)
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

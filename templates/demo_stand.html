@@ -342,6 +342,8 @@ function renderDetails(frame){
 }
 
 function show(index){
+  // У страницы прогона набора для просмотра снимков нет: показывать нечего.
+  if(!frames.length){ return; }
   current = (index + frames.length) % frames.length;
   const frame = frames[current];
   const img = document.getElementById('photo');
@@ -542,10 +544,10 @@ function renderAbout(){ document.getElementById('about').innerHTML = DATA.about;
 
 function switchView(name){
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + name));
-  document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.view === name)));
+  document.querySelectorAll('button.tab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.view === name)));
 }
 
-document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => switchView(t.dataset.view)));
+document.querySelectorAll('button.tab').forEach(t => t.addEventListener('click', () => switchView(t.dataset.view)));
 document.getElementById('prev').addEventListener('click', () => show(current - 1));
 document.getElementById('next').addEventListener('click', () => show(current + 1));
 document.getElementById('slider').addEventListener('input', e => show(Number(e.target.value)));
@@ -555,7 +557,10 @@ document.addEventListener('keydown', e => {
   if(e.key === 'ArrowRight'){ show(current + 1); }
 });
 
-document.getElementById('slider').max = String(frames.length - 1);
+document.getElementById('slider').max = String(Math.max(frames.length - 1, 0));
+if(!frames.length){
+  document.querySelector('.tab[data-view="frames"]').style.display = 'none';
+}
 document.getElementById('sh-viewer').classList.add('empty');
 renderDashboard(); renderAbout(); renderShifts(); show(0);
 </script>

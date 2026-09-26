@@ -13,17 +13,19 @@ from typing import Any
 
 from fastapi import BackgroundTasks, FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from config import Settings
 from site_monitoring.adapters.plan_fact_cache import PlanFactCache
 from site_monitoring.adapters.plan_fact_summarizer import PlanFactSummarizer
-from site_monitoring.adapters.run_storage import RunStorage
+from site_monitoring.adapters.run_storage import STATUS_DONE, RunStorage
 from site_monitoring.adapters.shift_timeline_reader import ShiftTimelineReader
 from site_monitoring.container import build_dependencies, build_vlm_transport
 from site_monitoring.services.analysis_run import AnalysisRunService
 from site_monitoring.services.plan_fact_report import build_report, describe_stages, describe_summary
 from site_monitoring.uploaded_plan_pipeline import UploadedPlanPipeline
+from report_stand import StandBuilder, StandSources
 from web_pages import render_dashboard, render_index, render_run
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -47,8 +49,15 @@ NO_RUN_MESSAGE = "Прогон не найден"
 NO_REPORT_MESSAGE = "Отчёт этого прогона ещё не готов"
 NO_MODEL_MESSAGE = "Доступ к языковой модели не настроен"
 NO_SAMPLE_MESSAGE = "Демонстрационный набор не собран: запустите scripts/build_sample_package.py"
+NO_PHOTO_MESSAGE = "Снимок не найден"
+STAND_DIR_NAME = "stand"
+STAND_INDEX_NAME = "index.html"
+STAND_PHOTOS_NAME = "photos"
+OBSERVATIONS_NAME = "observations.json"
+RUN_PHOTO_URL_TEMPLATE = "/runs/{run_id}/photos/"
 RUN_URL_TEMPLATE = "/runs/{run_id}"
 REDIRECT_CODE = 303
+GZIP_MIN_BYTES = 800
 
 settings = Settings()
 dependencies = build_dependencies(settings)
@@ -56,6 +65,8 @@ storage = RunStorage(RUNS_PATH)
 timeline_reader = ShiftTimelineReader(TIMELINES_PATH)
 summary_cache = PlanFactCache(SUMMARY_PATH)
 app = FastAPI(title=APP_TITLE)
+# Страницы уходят текстом и сжимаются в разы: канал до пользователя может быть узким.
+app.add_middleware(GZipMiddleware, minimum_size=GZIP_MIN_BYTES)
 if DEMO_PHOTOS_DIR.exists():
     # Снимки стенда отдаются файлами, а не вшиты в страницу: так она грузится быстро.
     app.mount("/demo/photos", StaticFiles(directory=DEMO_PHOTOS_DIR), name="demo-photos")
@@ -179,6 +190,24 @@ def run_dashboard(run_id: str) -> HTMLResponse:
     return HTMLResponse(page)
 
 
+@app.get("/runs/{run_id}/report", response_class=HTMLResponse)
+def run_report(run_id: str) -> FileResponse:
+    """Страница смен по слотам, собранная по данным этого прогона."""
+    target = storage.directory(run_id) / STAND_DIR_NAME / STAND_INDEX_NAME
+    if not target.exists():
+        raise HTTPException(status_code=404, detail=NO_REPORT_MESSAGE)
+    return FileResponse(target)
+
+
+@app.get("/runs/{run_id}/photos/{name}")
+def run_photo(run_id: str, name: str) -> FileResponse:
+    """Снимок со страницы прогона: имя берётся без пути, наружу выйти нельзя."""
+    target = storage.directory(run_id) / STAND_DIR_NAME / STAND_PHOTOS_NAME / Path(name).name
+    if not target.exists():
+        raise HTTPException(status_code=404, detail=NO_PHOTO_MESSAGE)
+    return FileResponse(target)
+
+
 @app.get("/runs/{run_id}/state")
 def run_state(run_id: str) -> dict[str, Any]:
     """Состояние прогона для обновления страницы без перезагрузки."""
@@ -220,3 +249,22 @@ def _execute_run(run_id: str) -> None:
     }
     service = AnalysisRunService(storage=storage, pipeline=pipeline, known_titles=known_titles)
     service.execute(run_id)
+    _build_run_stand(run_id)
+
+
+def _build_run_stand(run_id: str) -> None:
+    """Собирает страницу смен по данным прогона: ту же, что и у демонстрации."""
+    state = storage.load(run_id)
+    if state is None or state.status != STATUS_DONE:
+        return
+    titles = {str(work["work_id"]): str(work["title"]) for work in state.works}
+    sources = StandSources(
+        timelines_path=storage.timelines_path(run_id),
+        observations_path=storage.plan_dir(run_id) / OBSERVATIONS_NAME,
+        photos_dir=storage.photos_dir(run_id),
+        titles=titles,
+        output_dir=storage.directory(run_id) / STAND_DIR_NAME,
+        photo_url_prefix=RUN_PHOTO_URL_TEMPLATE.format(run_id=run_id),
+        photos_by_work=False,
+    )
+    StandBuilder(sources).build()
