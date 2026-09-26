@@ -55,5 +55,6 @@ def _build_slot(payload: dict[str, object]) -> ShiftSlot:
         has_motion=bool(payload["has_motion"]),
         is_first=bool(payload["is_first"]),
         limited_view=bool(payload.get("limited_view", False)),
+        foreign_equipment=tuple(str(item) for item in payload.get("foreign_equipment") or []),
     )
     return slot

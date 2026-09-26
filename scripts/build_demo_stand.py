@@ -4,10 +4,8 @@
 детектора, ответы VLM и вердикт по каждой контрольной дате.
 """
 
-import base64
 import json
 from datetime import datetime
-from io import BytesIO
 from pathlib import Path
 
 from PIL import Image
@@ -28,11 +26,14 @@ WORK_EVIDENCE_KIND = "признак_работ"
 FACADE_CHECK_KEY = "facade_check"
 FULL_STRIPES = 3
 TEMPLATE_PATH = Path("templates/demo_stand.html")
-OUTPUT_PATH = Path("docs/demo_stand.html")
+OUTPUT_DIR = Path("docs/stand")
+OUTPUT_PATH = OUTPUT_DIR / "index.html"
+PHOTOS_OUT_DIR = OUTPUT_DIR / "photos"
+PHOTO_URL_TEMPLATE = "/demo/photos/{name}"
 DATA_PLACEHOLDER = "__DATA__"
 PREVIEW_WIDTH = 1280
 PREVIEW_QUALITY = 78
-DATA_URI_TEMPLATE = "data:image/jpeg;base64,{encoded}"
+
 BUILD_STAMP_FORMAT = "%d.%m.%Y %H:%M"
 
 ABOUT_HTML = """
@@ -67,17 +68,20 @@ ABOUT_HTML = """
 """
 
 
-def encode_photo(path: Path, width_limit: int = PREVIEW_WIDTH, quality: int = PREVIEW_QUALITY) -> str:
-    """Готовит уменьшенную копию снимка и кодирует её для встраивания в страницу."""
+def save_photo(path: Path, name: str, width_limit: int = PREVIEW_WIDTH, quality: int = PREVIEW_QUALITY) -> str:
+    """Кладёт уменьшенную копию снимка рядом со страницей и возвращает её адрес.
+
+    Снимки вынесены из страницы наружу: встроенные в текст, они раздували её до
+    четырнадцати мегабайт, и браузер разбирал такую страницу мучительно долго.
+    Отдельными файлами они грузятся по мере надобности.
+    """
     image = Image.open(path).convert("RGB")
     width, height = image.size
     if width > width_limit:
         image = image.resize((width_limit, round(height * width_limit / width)))
-    buffer = BytesIO()
-    image.save(buffer, format="JPEG", quality=quality)
-    encoded = base64.b64encode(buffer.getvalue()).decode("ascii")
-    data_uri = DATA_URI_TEMPLATE.format(encoded=encoded)
-    return data_uri
+    PHOTOS_OUT_DIR.mkdir(parents=True, exist_ok=True)
+    image.save(PHOTOS_OUT_DIR / name, format="JPEG", quality=quality)
+    return PHOTO_URL_TEMPLATE.format(name=name)
 
 
 def collect_images(payload: dict[str, object]) -> dict[str, str]:
@@ -86,7 +90,7 @@ def collect_images(payload: dict[str, object]) -> dict[str, str]:
     for stage in payload["stages"]:  # type: ignore[index]
         for frame in stage["frames"]:
             path = PHOTOS_DIR / stage["work_id"] / frame["file"]
-            images[frame["file"]] = encode_photo(path)
+            images[frame["file"]] = save_photo(path, frame["file"])
     return images
 
 
@@ -205,7 +209,9 @@ def collect_shifts() -> tuple[list[dict[str, object]], dict[str, str]]:
             slot["details"] = details.get(slot["frame_id"])
             if slot["frame_id"] is not None:
                 path = SLOT_PHOTOS_DIR / work_id / slot["frame_id"]
-                images[slot["frame_id"]] = encode_photo(path, SLOT_PREVIEW_WIDTH, SLOT_PREVIEW_QUALITY)
+                images[slot["frame_id"]] = save_photo(
+                    path, slot["frame_id"], SLOT_PREVIEW_WIDTH, SLOT_PREVIEW_QUALITY
+                )
         timeline["work_name"] = names.get(work_id, work_id)
         timeline["kit"] = _kit_text(work_id)
         shifts.append(timeline)
@@ -277,7 +283,7 @@ def main() -> None:
     template = TEMPLATE_PATH.read_text(encoding="utf-8")
     serialized = json.dumps(payload, ensure_ascii=False).replace("</", "<\\/")
     page = template.replace(DATA_PLACEHOLDER, serialized)
-    OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     OUTPUT_PATH.write_text(page, encoding="utf-8")
     size_mb = OUTPUT_PATH.stat().st_size / 1024 / 1024
     print(f"Стенд собран: {OUTPUT_PATH} ({size_mb:.1f} МБ)")

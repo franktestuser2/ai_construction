@@ -34,6 +34,8 @@ h1{font-size:20px;margin:0 0 2px}
 .tabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--line)}
 .tab{padding:9px 14px;border:none;background:none;color:var(--muted);font:inherit;font-size:14px;
   cursor:pointer;border-bottom:2px solid transparent;border-radius:6px 6px 0 0}
+.tablink{text-decoration:none;display:inline-block;border-bottom:2px solid transparent}
+.tablink:hover{color:var(--ink)}
 .tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent);font-weight:600}
 main{max-width:1400px;margin:0 auto;padding:16px}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
@@ -159,6 +161,7 @@ h3{font-size:14px;margin:16px 0 6px}
     <button class="tab" role="tab" data-view="shifts" aria-selected="false">Смены по слотам</button>
     <button class="tab" role="tab" data-view="frames" aria-selected="false">Просмотр снимков</button>
     <button class="tab" role="tab" data-view="about" aria-selected="false">Что мы строим</button>
+    <a class="tab tablink" href="/">Загрузка данных</a>
   </div>
 </header>
 <main>

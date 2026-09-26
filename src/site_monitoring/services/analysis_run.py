@@ -7,8 +7,9 @@
 в календарном плане заказчика нет, это оговорено в требованиях.
 """
 
+import json
 import logging
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import date
 from pathlib import Path
 from typing import Protocol
@@ -82,11 +83,23 @@ class AnalysisRunService:
         self._pipeline.prepare(stages, matched)
         self._start(state, binding, matched)
         outcomes = self._process_stages(state, binding, matched)
+        self._save_timelines(state.run_id, outcomes)
         state.works = [_describe(outcome) for outcome in outcomes]
         state.status = STATUS_DONE
         state.stage_title = ""
         self._storage.save(state)
         logger.info("Прогон %s завершён: этапов %d", state.run_id, len(outcomes))
+
+    def _save_timelines(self, run_id: str, outcomes: tuple[WorkOutcome, ...]) -> None:
+        """Складывает посчитанные ленты рядом с прогоном: по ним строятся его страницы."""
+        payload = {
+            outcome.work_id: asdict(outcome.timeline)
+            for outcome in outcomes
+            if outcome.work_id is not None and outcome.timeline is not None
+        }
+        path = self._storage.timelines_path(run_id)
+        path.write_text(json.dumps(payload, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
+        logger.info("Ленты прогона %s сохранены: смен %d", run_id, len(payload))
 
     def _read_plan(self, run_id: str) -> tuple[UploadedStage, ...]:
         """Читает загруженный календарный план."""
@@ -134,6 +147,8 @@ def _describe(outcome: WorkOutcome) -> dict[str, object]:
     described = {
         "title": outcome.title,
         "work_id": outcome.work_id or NO_RULES_TITLE,
+        "limited_slots": timeline.limited_slots if timeline is not None else NOTHING,
+        "foreign_slots": timeline.foreign_slots if timeline is not None else NOTHING,
         "photo_count": outcome.photo_count,
         "counted_slots": timeline.counted_slots if timeline is not None else NOTHING,
         "planned_slots": len(timeline.slots) if timeline is not None else NOTHING,

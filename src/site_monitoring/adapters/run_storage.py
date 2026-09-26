@@ -21,6 +21,7 @@ STATE_FILE_NAME = "state.json"
 PLAN_DIR_NAME = "plan"
 PHOTOS_DIR_NAME = "photos"
 REPORT_FILE_NAME = "report.html"
+TIMELINES_FILE_NAME = "timelines.json"
 TIME_FORMAT = "%d.%m.%Y %H:%M"
 RUN_ID_LENGTH = 12
 STATUS_ACCEPTED = "принят"
@@ -91,6 +92,11 @@ class RunStorage:
     def photos_dir(self, run_id: str) -> Path:
         """Каталог с загруженными снимками."""
         path = self.directory(run_id) / PHOTOS_DIR_NAME
+        return path
+
+    def timelines_path(self, run_id: str) -> Path:
+        """Путь лент смен, посчитанных этим прогоном."""
+        path = self.directory(run_id) / TIMELINES_FILE_NAME
         return path
 
     def report_path(self, run_id: str) -> Path:

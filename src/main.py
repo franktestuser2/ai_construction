@@ -13,6 +13,7 @@ from typing import Any
 
 from fastapi import BackgroundTasks, FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 
 from config import Settings
 from site_monitoring.adapters.plan_fact_cache import PlanFactCache
@@ -30,7 +31,9 @@ logger = logging.getLogger(__name__)
 
 APP_TITLE = "Контроль строительных площадок"
 HEALTH_STATUS_OK = "ok"
-DEMO_REPORT_PATH = Path("docs/demo_stand.html")
+DEMO_DIR = Path("docs/stand")
+DEMO_REPORT_PATH = DEMO_DIR / "index.html"
+DEMO_PHOTOS_DIR = DEMO_DIR / "photos"
 RUNS_PATH = Path("data/runs")
 TIMELINES_PATH = Path("data/cache/shift_timelines.json")
 SUMMARY_PATH = Path("data/cache/plan_fact_summary.json")
@@ -53,6 +56,9 @@ storage = RunStorage(RUNS_PATH)
 timeline_reader = ShiftTimelineReader(TIMELINES_PATH)
 summary_cache = PlanFactCache(SUMMARY_PATH)
 app = FastAPI(title=APP_TITLE)
+if DEMO_PHOTOS_DIR.exists():
+    # Снимки стенда отдаются файлами, а не вшиты в страницу: так она грузится быстро.
+    app.mount("/demo/photos", StaticFiles(directory=DEMO_PHOTOS_DIR), name="demo-photos")
 
 
 @app.get("/health")
@@ -97,8 +103,10 @@ def sample_photos() -> FileResponse:
 @app.get("/dashboard", response_class=HTMLResponse)
 def dashboard() -> HTMLResponse:
     """Отвечает на главный вопрос: идём ли мы по календарному графику."""
-    report = _build_report()
-    page = render_dashboard(report, summary_cache.read())
+    timelines = timeline_reader.read_timelines()
+    report = _build_report(timelines)
+    foreign = sum(timeline.foreign_slots for timeline in timelines.values())
+    page = render_dashboard(report, summary_cache.read(), foreign)
     return HTMLResponse(page)
 
 
@@ -156,6 +164,21 @@ def show_run(run_id: str) -> HTMLResponse:
     return HTMLResponse(page)
 
 
+@app.get("/runs/{run_id}/dashboard", response_class=HTMLResponse)
+def run_dashboard(run_id: str) -> HTMLResponse:
+    """Сводка план-факта по данным конкретного прогона."""
+    state = storage.load(run_id)
+    if state is None:
+        raise HTTPException(status_code=404, detail=NO_RUN_MESSAGE)
+    reader = ShiftTimelineReader(storage.timelines_path(run_id))
+    titles = {str(work["work_id"]): str(work["title"]).split(" → ")[-1] for work in state.works}
+    timelines = reader.read_timelines()
+    report = build_report(timelines, titles, settings.slots_per_shift)
+    foreign = sum(timeline.foreign_slots for timeline in timelines.values())
+    page = render_dashboard(report, None, foreign)
+    return HTMLResponse(page)
+
+
 @app.get("/runs/{run_id}/state")
 def run_state(run_id: str) -> dict[str, Any]:
     """Состояние прогона для обновления страницы без перезагрузки."""
@@ -174,13 +197,14 @@ def assess_day(payload: dict[str, Any]) -> dict[str, Any]:
     return response
 
 
-def _build_report():
+def _build_report(timelines=None):
     """Считает план-факт по разобранным сменам из кеша."""
     titles = {
         work_id: work.full_name.split(" → ")[-1]
         for work_id, work in dependencies.works_by_id.items()
     }
-    report = build_report(timeline_reader.read_timelines(), titles, settings.slots_per_shift)
+    source = timeline_reader.read_timelines() if timelines is None else timelines
+    report = build_report(source, titles, settings.slots_per_shift)
     return report
 
 
