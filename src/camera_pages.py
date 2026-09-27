@@ -4,6 +4,7 @@ from datetime import datetime
 from html import escape
 
 from camera_watch.entity import Camera, CameraState, CapturedFrame, SafetyFinding
+from camera_scheme import SCHEME_STYLE, render_handoff, render_scheme
 from page_shell import STYLE, render_header
 
 CAMERAS_URL = "/cameras"
@@ -28,7 +29,7 @@ PAGE_STYLE = """
 .live .onair i{display:inline-block;width:6px;height:6px;border-radius:50%;background:#ff4d4f;
                margin-right:5px;animation:blink 1.4s infinite}
 @keyframes blink{50%{opacity:.25}}
-.shot{position:relative;display:inline-block;max-width:100%}
+.shot{position:relative;display:inline-block;max-width:100%;text-decoration:none}
 .shot img{display:block;width:100%;border-radius:8px}
 .shot b.box{position:absolute;border:2px solid #ff4d4f;border-radius:3px;
             box-shadow:0 0 0 1px rgba(0,0,0,.35)}
@@ -64,7 +65,7 @@ PAGE_STYLE = """
 PAGE_TEMPLATE = """<!DOCTYPE html>
 <html lang="ru"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{title}</title><style>{style}{page_style}</style></head>
+<title>{title}</title><style>{style}{page_style}{scheme_style}</style></head>
 <body>{header}<div class="wrap">
 <h1>{heading}<span class="svc extra">дополнительный сервис</span></h1>
 <p class="sub">{lead}</p>
@@ -80,11 +81,12 @@ def render_cameras(
     """Страница со всеми камерами: картинка онлайн, состояние съёмки и пул снятого."""
     cards = "".join(_camera_card(state) for state in states)
     body = f'<div class="grid">{cards}</div>' if states else _empty_panel()
-    body += _pool_panel(pool, keep_hours)
+    body += _pool_panel(pool, keep_hours) + render_scheme() + render_handoff()
     page = PAGE_TEMPLATE.format(
         title="Камеры площадки",
         style=STYLE,
         page_style=PAGE_STYLE,
+        scheme_style=SCHEME_STYLE,
         header=render_header(CAMERAS_URL),
         heading="Камеры площадки",
         lead="Каждая камера снимает кадр по расписанию, хранит его сутки и сразу отдаёт "
@@ -103,11 +105,16 @@ def render_camera(
     keep_hours: int,
 ) -> str:
     """Страница одной камеры: живой просмотр и архив снятого."""
-    body = _live_panel(camera, next_at) + _archive_panel(camera, frames, size, keep_hours)
+    body = (
+        _live_panel(camera, next_at)
+        + _archive_panel(camera, frames, size, keep_hours)
+        + render_handoff()
+    )
     page = PAGE_TEMPLATE.format(
         title=escape(camera.title),
         style=STYLE,
         page_style=PAGE_STYLE,
+        scheme_style=SCHEME_STYLE,
         header=render_header(CAMERAS_URL),
         heading=escape(camera.title),
         lead=escape(camera.place or "Камера площадки"),
@@ -131,8 +138,8 @@ def _pool_panel(pool: list[tuple[Camera, CapturedFrame]], keep_hours: int) -> st
     panel = f"""<div class="panel"><h2>Пул снимков объекта · {len(pool)}</h2>
 <p class="note">Отсюда основной сервис берёт снимки на сверку с календарным планом.
 У каждого кадра известны камера и время съёмки — больше ему ничего не нужно.
-Хранится <b>{keep_hours} ч</b>: три камеры по три кадра в час дают за смену не более
-{len(pool) if len(pool) > POOL_LIMIT else POOL_LIMIT} снимков.</p>
+Хранится <b>{keep_hours} ч</b> — рабочая смена: три камеры по три кадра в час дают
+не больше {POOL_LIMIT} снимков, и пул целиком помещается сюда миниатюрами.</p>
 <div class="pool">{tiles}</div></div>"""
     return panel
 
@@ -191,11 +198,9 @@ def _preview(state: CameraState) -> str:
 
 
 def _camera_actions(camera_id: str) -> str:
-    """Кнопки камеры: снять кадр и отправить снятое основному сервису."""
+    """Кнопка камеры: снять кадр вне расписания."""
     block = f"""<div class="actions">
   <form method="post" action="/cameras/{camera_id}/capture"><button>Снять кадр</button></form>
-  <form method="post" action="/cameras/{camera_id}/send">
-    <button class="ghost">Отправить в основной сервис</button></form>
 </div>"""
     return block
 
@@ -299,14 +304,24 @@ def _finding_line(finding: SafetyFinding) -> str:
 
 
 def _shot(camera_id: str, frame: CapturedFrame, size: tuple[int, int]) -> str:
-    """Кадр с обведёнными областями."""
+    """Кадр с обведёнными областями.
+
+    В ленте показывается миниатюра: архив за смену это несколько десятков кадров,
+    и полноразмерными они весили бы десятки мегабайт на одной странице. Полный
+    снимок открывается по клику.
+    """
     width, height = size
-    boxes = "".join(box_overlay(item.box, "" if item.is_violation else "calm", width, height) for item in frame.findings if item.box)
+    boxes = "".join(
+        box_overlay(item.box, "" if item.is_violation else "calm", width, height)
+        for item in frame.findings
+        if item.box
+    )
     if not frame.findings:
         boxes = "".join(box_overlay(region.box, "calm", width, height) for region in frame.people)
     shot = (
-        f'<span class="shot"><img src="/cameras/{camera_id}/photos/{frame.file_name}" '
-        f'alt="кадр {frame.captured_at.strftime(TIME_FORMAT)}" loading="lazy">{boxes}</span>'
+        f'<a class="shot" href="/cameras/{camera_id}/photos/{frame.file_name}">'
+        f'<img src="/cameras/{camera_id}/thumbs/{frame.file_name}" '
+        f'alt="кадр {frame.captured_at.strftime(TIME_FORMAT)}" loading="lazy">{boxes}</a>'
     )
     return shot
 

@@ -4,8 +4,11 @@
 на снятом заметили и с какой достоверностью.
 """
 
+from html import escape
+
 from camera_watch.entity import Camera, CapturedFrame, SafetyCheck, SafetyFinding
 from camera_pages import DEFAULT_SIZE, PAGE_STYLE, PAGE_TEMPLATE, box_overlay
+from camera_scheme import SCHEME_STYLE
 from page_shell import STYLE, render_header
 
 CAMERAS_URL = "/cameras"
@@ -32,6 +35,7 @@ def render_safety(
         title="Охрана труда",
         style=STYLE,
         page_style=PAGE_STYLE,
+        scheme_style=SCHEME_STYLE,
         header=render_header(SAFETY_URL),
         heading="Охрана труда",
         lead="Отметки модели по снятым кадрам. Отметка — повод посмотреть кадр, а не "
@@ -82,10 +86,11 @@ def _single_shot(
 ) -> str:
     """Кадр события с одной обведённой областью."""
     width, height = size
-    box = _box(finding.box, "", width, height) if finding.box else ""
+    box = box_overlay(finding.box, "", width, height) if finding.box else ""
     shot = (
-        f'<span class="shot"><img src="/cameras/{camera_id}/photos/{frame.file_name}" '
-        f'alt="кадр события" loading="lazy">{box}</span>'
+        f'<a class="shot" href="/cameras/{camera_id}/photos/{frame.file_name}">'
+        f'<img src="/cameras/{camera_id}/thumbs/{frame.file_name}" '
+        f'alt="кадр события" loading="lazy">{box}</a>'
     )
     return shot
 

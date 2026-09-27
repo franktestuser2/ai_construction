@@ -6,6 +6,9 @@
 Вид работ руками не выбирается. У объекта есть календарный план, и этап определяется
 датой съёмки: сегодня в плане такой-то этап, значит снятое сегодня разбирается по его
 правилам. Именно так задача и поставлена — сверка факта с планом, а не наоборот.
+
+Пока графика по объекту камер нет, приём работает, а разбор — нет: `run_pool` вызывается
+только при включённой настройке, и очередь просто не наполняется.
 """
 
 import logging
@@ -13,27 +16,24 @@ from collections.abc import Callable
 from datetime import date, datetime
 from pathlib import Path
 
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile
-from fastapi.responses import HTMLResponse, RedirectResponse
-
-from ingest_pages import render_ingest
+from fastapi import APIRouter, File, Form, UploadFile
 from site_monitoring.adapters.uploaded_plan_reader import UploadedPlanReader, UploadedStage
 
 logger = logging.getLogger(__name__)
 
-INGEST_URL = "/ingest"
-RUN_URL_TEMPLATE = "/runs/{run_id}"
 IMAGE_SUFFIXES = (".jpg", ".jpeg", ".png")
-REDIRECT_CODE = 303
-EMPTY_QUEUE_MESSAGE = "В очереди нет снимков"
 NO_PLAN_MESSAGE = "Календарный план объекта не найден"
 ACCEPTED_KEY = "accepted"
 NOTHING = 0
 StartRun = Callable[[bytes, str, list[tuple[str, bytes]]], str]
 
 
-def build_ingest_router(inbox: Path, plan_path: Path, start_run: StartRun, note: str) -> APIRouter:
-    """Собирает маршруты приёмной вокруг плана объекта и способа запускать разбор."""
+def build_ingest_router(inbox: Path) -> APIRouter:
+    """Собирает приём кадров от контура наблюдения.
+
+    Страницы у приёмной нет: пул снятого показан на странице камер, а разбор запускается
+    только вместе с календарным планом объекта — отдельной очереди для этого не нужно.
+    """
     router = APIRouter()
 
     @router.post("/ingest/frames")
@@ -52,21 +52,6 @@ def build_ingest_router(inbox: Path, plan_path: Path, start_run: StartRun, note:
             accepted += 1
         logger.info("Приёмная: от камеры %s принято снимков %d", camera_id, accepted)
         return {ACCEPTED_KEY: accepted}
-
-    @router.get(INGEST_URL, response_class=HTMLResponse)
-    def ingest_page() -> HTMLResponse:
-        """Страница приёмной: очередь, этап плана на сегодня и запуск разбора."""
-        stages = read_plan(plan_path)
-        page = render_ingest(_queue(inbox), stage_for(stages, date.today()), len(stages), note)
-        return HTMLResponse(page)
-
-    @router.post("/ingest/run")
-    def run_queue() -> RedirectResponse:
-        """Пускает накопленные кадры в разбор по календарному плану объекта."""
-        run_id = run_pool(inbox, plan_path, start_run)
-        if run_id is None:
-            raise HTTPException(status_code=400, detail=EMPTY_QUEUE_MESSAGE)
-        return RedirectResponse(RUN_URL_TEMPLATE.format(run_id=run_id), status_code=REDIRECT_CODE)
 
     return router
 

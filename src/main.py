@@ -67,14 +67,6 @@ RUN_PHOTO_URL_TEMPLATE = "/runs/{run_id}/photos/"
 RUN_URL_TEMPLATE = "/runs/{run_id}"
 REDIRECT_CODE = 303
 GZIP_MIN_BYTES = 800
-# Камеры объекта — публичные трансляции настоящих строек. Обзорная камера ставится
-# высоко, и это влияет на то, что модели способны на ней разглядеть.
-CAMERA_NOTE = (
-    "Камеры объекта — публичные трансляции настоящих строек. Детектор техники на них "
-    "работает: на кадре камеры в Мытищах он находит экскаватор и погрузчики. Людей на "
-    "таких ракурсах разглядеть нельзя — они занимают два десятка пикселей, поэтому "
-    "проверки охраны труда по этим камерам молчат."
-)
 
 settings = Settings()
 dependencies = build_dependencies(settings)
@@ -93,9 +85,12 @@ def _capture_loop() -> None:
         except OSError:
             logger.exception("Съёмка по расписанию сорвалась")
             continue
-        for camera_id in {item.frame.camera_id for item in outcomes}:
-            sent, note = watch.send_to_main_service(camera_id)
-            logger.info("Камера %s снята по расписанию: %s", camera_id, note)
+        # Снятое уходит основному сервису только вместе с разбором: пока графика по
+        # объекту нет, пул живёт в архиве камер, и копия в приёмной никому не нужна.
+        if settings.auto_analyse:
+            for camera_id in {item.frame.camera_id for item in outcomes}:
+                sent, note = watch.send_to_main_service(camera_id)
+                logger.info("Камера %s снята по расписанию: %s", camera_id, note)
         # Смена кончилась — разбираем накопленное само, не дожидаясь нажатия кнопки.
         _analyse_finished_shift(datetime.now())
         # Снятое живёт ограниченный срок: без уборки архив растёт без предела.
@@ -159,11 +154,7 @@ def _start_run_from_frames(plan: bytes, plan_name: str, photos: list[tuple[str, 
 
 
 app.include_router(build_camera_router(watch, settings.archive_hours))
-app.include_router(
-    build_ingest_router(
-        settings.camera_inbox_path, settings.site_plan_path, _start_run_from_frames, CAMERA_NOTE
-    )
-)
+app.include_router(build_ingest_router(settings.camera_inbox_path))
 
 
 @app.get("/health")
