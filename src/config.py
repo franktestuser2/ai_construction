@@ -51,8 +51,9 @@ DEFAULT_ONNX_THREADS = 2
 # Часовой ход съёмки: планировщик просыпается чаще периода, чтобы не проспать границу слота.
 DEFAULT_CAPTURE_TICK_SECONDS = 60
 # Снимок с камеры нужен, пока его не разобрали и не сверили с планом; дальше это
-# занятое место. Сутки — решение пользователя от 27.09.2026.
-DEFAULT_ARCHIVE_HOURS = 24
+# занятое место. Восемь часов — рабочая смена: три камеры по три кадра в час дают
+# пул не больше 72 снимков, и он целиком помещается на страницу миниатюрами.
+DEFAULT_ARCHIVE_HOURS = 8
 # Календарный план объекта, на котором стоят камеры: по нему снятое сегодня
 # связывается с видом работ. Пересобирается scripts/build_site_plan.py.
 DEFAULT_SITE_PLAN_PATH = Path("config/План_объекта.csv")
@@ -112,6 +113,9 @@ class Settings(BaseSettings):
     capture_tick_seconds: int = DEFAULT_CAPTURE_TICK_SECONDS
     archive_hours: int = DEFAULT_ARCHIVE_HOURS
     site_plan_path: Path = DEFAULT_SITE_PLAN_PATH
+    # Разбор накопленного по концу смены. Выключен: календарного графика по объекту
+    # этих камер у нас нет, и сверять снятое пока не с чем.
+    auto_analyse: bool = False
 
     @property
     def slots_per_shift(self) -> int:

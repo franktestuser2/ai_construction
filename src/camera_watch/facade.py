@@ -173,6 +173,25 @@ class CameraWatchFacade:
         path = self._archive.photo_path(camera_id, name)
         return path
 
+    def thumb_path(self, camera_id: str, name: str) -> Path:
+        """Путь миниатюры снимка."""
+        path = self._archive.thumb_path(camera_id, name)
+        return path
+
+    def pool(self) -> list[tuple[Camera, CapturedFrame]]:
+        """Все снятые кадры объекта от новых к старым.
+
+        Это и есть пул, из которого основной сервис берёт снимки на разбор: у каждого
+        кадра известны камера и время съёмки, и больше ему ничего не нужно.
+        """
+        collected = [
+            (camera, frame)
+            for camera in self.cameras()
+            for frame in self._archive.list_frames(camera.camera_id)
+        ]
+        collected.sort(key=lambda item: item[1].captured_at, reverse=True)
+        return collected
+
     def clip_path(self, camera_id: str, name: str) -> Path:
         """Путь отрезка записи камеры."""
         path = self._archive.clip_path(camera_id, name)

@@ -110,6 +110,8 @@ def _analyse_finished_shift(moment: datetime) -> None:
     Раз в день, а не после каждой съёмки: разбор обращается к моделям, и гонять их
     по девять раз за смену ради одного и того же дня незачем.
     """
+    if not settings.auto_analyse:
+        return
     if moment.hour < settings.shift_start_hour + settings.shift_hours:
         return
     marker = SHIFT_MARKERS_PATH / f"{moment.date().isoformat()}.txt"

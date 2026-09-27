@@ -12,7 +12,8 @@ from datetime import datetime
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response, StreamingResponse
 
-from camera_pages import render_camera, render_cameras, render_safety
+from camera_pages import render_camera, render_cameras
+from safety_pages import render_safety
 from camera_watch.facade import CameraWatchFacade
 
 logger = logging.getLogger(__name__)
@@ -42,7 +43,7 @@ def build_camera_router(watch: CameraWatchFacade, keep_hours: int) -> APIRouter:
     def cameras_page() -> HTMLResponse:
         """Страница со всеми камерами."""
         states = watch.states(datetime.now())
-        page = render_cameras(states)
+        page = render_cameras(states, watch.pool(), keep_hours)
         return HTMLResponse(page)
 
     @router.get("/cameras/{camera_id}", response_class=HTMLResponse)
@@ -98,6 +99,14 @@ def build_camera_router(watch: CameraWatchFacade, keep_hours: int) -> APIRouter:
     def camera_photo(camera_id: str, name: str) -> FileResponse:
         """Снимок из архива камеры; имя берётся без пути."""
         target = watch.photo_path(camera_id, name)
+        if not target.exists():
+            raise HTTPException(status_code=404, detail=NO_PHOTO_MESSAGE)
+        return FileResponse(target)
+
+    @router.get("/cameras/{camera_id}/thumbs/{name}")
+    def camera_thumb(camera_id: str, name: str) -> FileResponse:
+        """Миниатюра снимка для показа пулом."""
+        target = watch.thumb_path(camera_id, name)
         if not target.exists():
             raise HTTPException(status_code=404, detail=NO_PHOTO_MESSAGE)
         return FileResponse(target)

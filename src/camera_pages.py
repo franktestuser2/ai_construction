@@ -3,7 +3,7 @@
 from datetime import datetime
 from html import escape
 
-from camera_watch.entity import Camera, CameraState, CapturedFrame, SafetyCheck, SafetyFinding
+from camera_watch.entity import Camera, CameraState, CapturedFrame, SafetyFinding
 from page_shell import STYLE, render_header
 
 CAMERAS_URL = "/cameras"
@@ -11,6 +11,10 @@ SAFETY_URL = "/safety"
 TIME_FORMAT = "%d.%m.%Y %H:%M"
 SHORT_TIME_FORMAT = "%H:%M"
 NEVER = "ещё не снимали"
+# Три камеры, три кадра в час, восьмичасовая смена.
+POOL_LIMIT = 72
+# Размер кадра по умолчанию, если у камеры его не спросить.
+DEFAULT_SIZE = (1920, 1080)
 PAGE_STYLE = """
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px}
 .cam{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
@@ -47,6 +51,14 @@ PAGE_STYLE = """
 .pill.rec{background:var(--bg);color:var(--muted);border:1px solid var(--line)}
 .measure{background:var(--bg);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;
          padding:10px 12px;margin-top:10px;font-size:13px;color:var(--muted)}
+.pool{display:grid;grid-template-columns:repeat(auto-fill,minmax(122px,1fr));gap:8px;margin-top:12px}
+.pt{display:block;text-decoration:none;color:var(--ink);background:var(--bg);
+    border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.pt:hover{border-color:var(--accent)}
+.pt img{display:block;width:100%;aspect-ratio:16/9;object-fit:cover}
+.pt span{display:flex;justify-content:space-between;gap:6px;padding:4px 7px;
+         font-size:11px;color:var(--muted)}
+.pt b{color:var(--ink);font-weight:600}
 """
 
 PAGE_TEMPLATE = """<!DOCTYPE html>
@@ -60,10 +72,15 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
 </div></body></html>"""
 
 
-def render_cameras(states: tuple[CameraState, ...]) -> str:
-    """Страница со всеми камерами: картинка онлайн и состояние съёмки."""
+def render_cameras(
+    states: tuple[CameraState, ...],
+    pool: list[tuple[Camera, CapturedFrame]],
+    keep_hours: int,
+) -> str:
+    """Страница со всеми камерами: картинка онлайн, состояние съёмки и пул снятого."""
     cards = "".join(_camera_card(state) for state in states)
     body = f'<div class="grid">{cards}</div>' if states else _empty_panel()
+    body += _pool_panel(pool, keep_hours)
     page = PAGE_TEMPLATE.format(
         title="Камеры площадки",
         style=STYLE,
@@ -99,32 +116,36 @@ def render_camera(
     return page
 
 
-def render_safety(
-    events: list[tuple[Camera, CapturedFrame, SafetyFinding]],
-    checks: tuple[SafetyCheck, ...],
-    sizes: dict[str, tuple[int, int]],
-) -> str:
-    """Лента охраны труда: отметки моделей с кадром-доказательством."""
-    if events:
-        rows = "".join(_event_row(camera, frame, finding, sizes) for camera, frame, finding in events)
-        body = f'<div class="panel">{rows}</div>{_checks_panel(checks)}'
-    else:
-        body = (
-            '<div class="panel"><p class="note">Отметок пока нет. Снимите кадр на странице '
-            f'<a href="{CAMERAS_URL}">камер</a> или дождитесь съёмки по расписанию.</p></div>'
-            + _checks_panel(checks)
+def _pool_panel(pool: list[tuple[Camera, CapturedFrame]], keep_hours: int) -> str:
+    """Пул снятых кадров объекта: миниатюры с камерой и временем съёмки.
+
+    Пул показывается миниатюрами, а не снимками: за смену их набирается несколько
+    десятков, и полноразмерными они весили бы десятки мегабайт на одной странице.
+    """
+    if not pool:
+        return (
+            '<div class="panel"><h2>Пул снимков пуст</h2><p class="note">Кадры появятся '
+            "после первой съёмки по расписанию.</p></div>"
         )
-    page = PAGE_TEMPLATE.format(
-        title="Охрана труда",
-        style=STYLE,
-        page_style=PAGE_STYLE,
-        header=render_header(SAFETY_URL),
-        heading="Охрана труда",
-        lead="Отметки модели по снятым кадрам. Отметка — повод посмотреть кадр, а не "
-        "установленный факт: подтверждает нарушение человек.",
-        body=body,
-    )
-    return page
+    tiles = "".join(_pool_tile(camera, frame) for camera, frame in pool)
+    panel = f"""<div class="panel"><h2>Пул снимков объекта · {len(pool)}</h2>
+<p class="note">Отсюда основной сервис берёт снимки на сверку с календарным планом.
+У каждого кадра известны камера и время съёмки — больше ему ничего не нужно.
+Хранится <b>{keep_hours} ч</b>: три камеры по три кадра в час дают за смену не более
+{len(pool) if len(pool) > POOL_LIMIT else POOL_LIMIT} снимков.</p>
+<div class="pool">{tiles}</div></div>"""
+    return panel
+
+
+def _pool_tile(camera: Camera, frame: CapturedFrame) -> str:
+    """Одна миниатюра пула."""
+    stamp = frame.captured_at.strftime(SHORT_TIME_FORMAT)
+    tile = f"""<a class="pt" href="/cameras/{camera.camera_id}/photos/{frame.file_name}"
+   title="{escape(camera.title)} · {frame.captured_at.strftime(TIME_FORMAT)}">
+  <img src="/cameras/{camera.camera_id}/thumbs/{frame.file_name}" loading="lazy"
+       alt="{escape(camera.camera_id)} {stamp}">
+  <span>{escape(camera.camera_id)}<b>{stamp}</b></span></a>"""
+    return tile
 
 
 def _camera_card(state: CameraState) -> str:
@@ -280,9 +301,9 @@ def _finding_line(finding: SafetyFinding) -> str:
 def _shot(camera_id: str, frame: CapturedFrame, size: tuple[int, int]) -> str:
     """Кадр с обведёнными областями."""
     width, height = size
-    boxes = "".join(_box(item.box, "" if item.is_violation else "calm", width, height) for item in frame.findings if item.box)
+    boxes = "".join(box_overlay(item.box, "" if item.is_violation else "calm", width, height) for item in frame.findings if item.box)
     if not frame.findings:
-        boxes = "".join(_box(region.box, "calm", width, height) for region in frame.people)
+        boxes = "".join(box_overlay(region.box, "calm", width, height) for region in frame.people)
     shot = (
         f'<span class="shot"><img src="/cameras/{camera_id}/photos/{frame.file_name}" '
         f'alt="кадр {frame.captured_at.strftime(TIME_FORMAT)}" loading="lazy">{boxes}</span>'
@@ -290,7 +311,7 @@ def _shot(camera_id: str, frame: CapturedFrame, size: tuple[int, int]) -> str:
     return shot
 
 
-def _box(box: tuple[int, int, int, int], extra: str, width: int, height: int) -> str:
+def box_overlay(box: tuple[int, int, int, int], extra: str, width: int, height: int) -> str:
     """Рамка поверх кадра в долях его размера."""
     left, top, right, bottom = box
     style = (
@@ -298,76 +319,6 @@ def _box(box: tuple[int, int, int, int], extra: str, width: int, height: int) ->
         f"width:{100 * (right - left) / width:.2f}%;height:{100 * (bottom - top) / height:.2f}%"
     )
     return f'<b class="box {extra}" style="{style}"></b>'
-
-
-def _event_row(
-    camera: Camera,
-    frame: CapturedFrame,
-    finding: SafetyFinding,
-    sizes: dict[str, tuple[int, int]],
-) -> str:
-    """Строка ленты охраны труда."""
-    size = sizes.get(camera.camera_id, (960, 540))
-    clip = (
-        f'<a href="/cameras/{camera.camera_id}/clips/{frame.clip_name}">отрезок записи</a>'
-        if frame.clip_name
-        else '<span class="note">записи нет</span>'
-    )
-    row = f"""<div class="event"><div class="rowline">
-  {_single_shot(camera.camera_id, frame, finding, size)}
-  <div class="text">
-    <b>{escape(finding.title)}</b> {_finding_badge(finding)}
-    <div class="meta"><span>камера: <b>{escape(camera.title)}</b></span>
-      <span>снято: <b>{frame.captured_at.strftime(TIME_FORMAT)}</b></span></div>
-    <p class="note">уверенность {finding.confidence:.2f}, отрыв {finding.margin:+.3f};
-      ближе всего «{escape(finding.best_positive)}», против «{escape(finding.best_negative)}»</p>
-    <p class="note">{clip} · <a href="/cameras/{camera.camera_id}">камера</a></p>
-  </div></div></div>"""
-    return row
-
-
-def _finding_badge(finding: SafetyFinding) -> str:
-    """Отметка уверенности находки."""
-    badge = (
-        '<span class="badge sure">уверенная отметка</span>'
-        if finding.confident
-        else '<span class="badge maybe">кандидат на проверку</span>'
-    )
-    return badge
-
-
-def _single_shot(
-    camera_id: str, frame: CapturedFrame, finding: SafetyFinding, size: tuple[int, int]
-) -> str:
-    """Кадр события с одной обведённой областью."""
-    width, height = size
-    box = _box(finding.box, "", width, height) if finding.box else ""
-    shot = (
-        f'<span class="shot"><img src="/cameras/{camera_id}/photos/{frame.file_name}" '
-        f'alt="кадр события" loading="lazy">{box}</span>'
-    )
-    return shot
-
-
-def _checks_panel(checks: tuple[SafetyCheck, ...]) -> str:
-    """Панель с тем, что именно проверяется и на чём это измерено."""
-    if not checks:
-        return (
-            '<div class="panel"><h2>Проверки охраны труда</h2>'
-            '<p class="note">Проверки не настроены или не найдены веса модели.</p></div>'
-        )
-    items = "".join(
-        f"<li><b>{escape(item.title)}</b> — порог отметки {item.threshold:.2f}, "
-        f"уверенной отметки {item.strict_threshold:.2f}"
-        f'<div class="measure">{escape(item.measured_on)}</div></li>'
-        for item in checks
-    )
-    panel = f"""<div class="panel"><h2>Проверки охраны труда</h2>
-<p class="note">Проверка сравнивает кадр с формулировками «за» и «против»: абсолютная
-близость у этой модели ничего не значит, значит только сравнение. Исхода три — признак
-есть, признака нет и «не ясно», когда сравнение не разделило формулировки.</p>
-<ul>{items}</ul></div>"""
-    return panel
 
 
 def _empty_panel() -> str:

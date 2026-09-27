@@ -25,6 +25,7 @@ from camera_watch.entity import CapturedFrame, PersonRegion, SafetyFinding
 logger = logging.getLogger(__name__)
 
 PHOTOS_DIR_NAME = "photos"
+THUMBS_DIR_NAME = "thumbs"
 CLIPS_DIR_NAME = "clips"
 INDEX_FILE_NAME = "frames.json"
 NAME_FORMAT = "%Y%m%d-%H%M%S"
@@ -40,6 +41,10 @@ SOFTWARE_TAG = "site-monitoring camera watch"
 JPEG_SUFFIX = ".jpg"
 CLIP_SUFFIX = ".mp4"
 JPEG_QUALITY = 88
+# Миниатюра к каждому снимку: пул за смену это 72 кадра, и полноразмерными они
+# весили бы полсотни мегабайт на одной странице.
+THUMB_WIDTH = 320
+THUMB_QUALITY = 72
 NOTHING = 0
 
 
@@ -52,6 +57,16 @@ class FrameArchive:
     def photos_dir(self, camera_id: str) -> Path:
         """Каталог снимков камеры."""
         path = self._root / camera_id / PHOTOS_DIR_NAME
+        return path
+
+    def thumbs_dir(self, camera_id: str) -> Path:
+        """Каталог миниатюр камеры."""
+        path = self._root / camera_id / THUMBS_DIR_NAME
+        return path
+
+    def thumb_path(self, camera_id: str, name: str) -> Path:
+        """Путь миниатюры одного снимка."""
+        path = self.thumbs_dir(camera_id) / Path(name).name
         return path
 
     def clips_dir(self, camera_id: str) -> Path:
@@ -77,10 +92,19 @@ class FrameArchive:
         target = directory / name
         picture = Image.fromarray(image[:, :, ::-1])
         picture.save(target, quality=JPEG_QUALITY, exif=_build_exif(captured_at, note))
+        self._save_thumb(picture, camera_id, name)
         # Отметка файла ставится вслед за EXIF: по ней снимок читается, если метаданных нет.
         stamp = captured_at.timestamp()
         os.utime(target, (stamp, stamp))
         return name
+
+    def _save_thumb(self, picture: Image.Image, camera_id: str, name: str) -> None:
+        """Кладёт рядом уменьшенную копию снимка для показа пулом."""
+        directory = self.thumbs_dir(camera_id)
+        directory.mkdir(parents=True, exist_ok=True)
+        small = picture.copy()
+        small.thumbnail((THUMB_WIDTH, THUMB_WIDTH))
+        small.save(directory / name, quality=THUMB_QUALITY)
 
     def read_photo_bytes(self, camera_id: str, name: str) -> bytes:
         """Содержимое снимка для отправки в основной сервис."""
@@ -136,6 +160,7 @@ class FrameArchive:
     def _remove_files(self, camera_id: str, record: dict[str, object]) -> None:
         """Удаляет файлы одного кадра: сам снимок и отрезок записи к нему."""
         self.photo_path(camera_id, str(record["file_name"])).unlink(missing_ok=True)
+        self.thumb_path(camera_id, str(record["file_name"])).unlink(missing_ok=True)
         clip_name = str(record.get("clip_name") or "")
         if clip_name:
             self.clip_path(camera_id, clip_name).unlink(missing_ok=True)
