@@ -39,6 +39,17 @@ DEFAULT_BARRIER_WEIGHTS_PATH = Path("models/facade/weights/torchvision/barrier_r
 DEFAULT_FACADE_CELL_THRESHOLD = 0.35
 DEFAULT_BUILDING_THRESHOLD = 0.85
 DEFAULT_BARRIER_THRESHOLD = 0.94
+# Контур наблюдения за камерами: описание камер, проверки охраны труда и место под архив.
+DEFAULT_CAMERAS_PATH = Path("config/cameras.json")
+DEFAULT_SAFETY_CHECKS_PATH = Path("config/safety_checks.json")
+DEFAULT_CLIP_MODELS_PATH = Path("materials/external/video-monitoring-master/data/models/clip")
+DEFAULT_CLIP_PHRASE_CACHE_PATH = Path("data/cache/clip_phrases")
+DEFAULT_CAMERA_ARCHIVE_PATH = Path("data/cameras/archive")
+DEFAULT_CAMERA_INBOX_PATH = Path("data/cameras/inbox")
+DEFAULT_MAIN_SERVICE_URL = "http://127.0.0.1:8090"
+DEFAULT_ONNX_THREADS = 2
+# Часовой ход съёмки: планировщик просыпается чаще периода, чтобы не проспать границу слота.
+DEFAULT_CAPTURE_TICK_SECONDS = 60
 
 
 class Settings(BaseSettings):
@@ -82,6 +93,17 @@ class Settings(BaseSettings):
     parallel_requests: int = DEFAULT_PARALLEL_REQUESTS
     slot_photos_path: Path = DEFAULT_SLOT_PHOTOS_PATH
     camera_markup_path: Path = DEFAULT_CAMERA_MARKUP_PATH
+
+    cameras_path: Path = DEFAULT_CAMERAS_PATH
+    safety_checks_path: Path = DEFAULT_SAFETY_CHECKS_PATH
+    clip_models_path: Path = DEFAULT_CLIP_MODELS_PATH
+    clip_phrase_cache_path: Path = DEFAULT_CLIP_PHRASE_CACHE_PATH
+    camera_archive_path: Path = DEFAULT_CAMERA_ARCHIVE_PATH
+    camera_inbox_path: Path = DEFAULT_CAMERA_INBOX_PATH
+    main_service_url: str = DEFAULT_MAIN_SERVICE_URL
+    onnx_threads: int = DEFAULT_ONNX_THREADS
+    capture_enabled: bool = True
+    capture_tick_seconds: int = DEFAULT_CAPTURE_TICK_SECONDS
 
     @property
     def slots_per_shift(self) -> int:

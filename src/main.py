@@ -7,7 +7,12 @@
 """
 
 import logging
+import threading
+import time
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from dataclasses import asdict
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -16,7 +21,10 @@ from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 
+from camera_routes import build_camera_router
+from camera_watch.container import build_camera_watch
 from config import Settings
+from ingest_routes import build_ingest_router
 from site_monitoring.adapters.plan_fact_cache import PlanFactCache
 from site_monitoring.adapters.plan_fact_summarizer import PlanFactSummarizer
 from site_monitoring.adapters.run_storage import STATUS_DONE, RunStorage
@@ -58,18 +66,84 @@ RUN_PHOTO_URL_TEMPLATE = "/runs/{run_id}/photos/"
 RUN_URL_TEMPLATE = "/runs/{run_id}"
 REDIRECT_CODE = 303
 GZIP_MIN_BYTES = 800
+# На рисованных кадрах симулятора детектор техники честно не находит ничего: он обучен
+# на фотографиях. Путь «камера → основной сервис» это не ломает, но предупредить надо.
+SIMULATOR_NOTE = (
+    "Кадры демонстрационных камер нарисованы генератором сцен из репозитория "
+    "video-monitoring. Детектор техники обучен на фотографиях и на рисованной сцене "
+    "находок не даёт — разбор пройдёт, но техники в нём не будет. Проверка охраны "
+    "труда по этим кадрам работает: она сравнивает кадр с текстовыми описаниями."
+)
 
 settings = Settings()
 dependencies = build_dependencies(settings)
 storage = RunStorage(RUNS_PATH)
 timeline_reader = ShiftTimelineReader(TIMELINES_PATH)
 summary_cache = PlanFactCache(SUMMARY_PATH)
-app = FastAPI(title=APP_TITLE)
+watch = build_camera_watch(settings)
+
+
+def _capture_loop() -> None:
+    """Снимает камеры по расписанию и передаёт снятое основному сервису."""
+    while True:
+        time.sleep(settings.capture_tick_seconds)
+        try:
+            outcomes = watch.capture_due(datetime.now())
+        except OSError:
+            logger.exception("Съёмка по расписанию сорвалась")
+            continue
+        for camera_id in {item.frame.camera_id for item in outcomes}:
+            sent, note = watch.send_to_main_service(camera_id)
+            logger.info("Камера %s снята по расписанию: %s", camera_id, note)
+
+
+@asynccontextmanager
+async def lifespan(application: FastAPI) -> AsyncIterator[None]:
+    """Поднимает съёмку по расписанию вместе с сервисом."""
+    if settings.capture_enabled:
+        worker = threading.Thread(target=_capture_loop, daemon=True)
+        worker.start()
+        logger.info("Съёмка по расписанию запущена, шаг %d с", settings.capture_tick_seconds)
+    else:
+        logger.info("Съёмка по расписанию выключена настройкой")
+    yield
+
+
+app = FastAPI(title=APP_TITLE, lifespan=lifespan)
 # Страницы уходят текстом и сжимаются в разы: канал до пользователя может быть узким.
 app.add_middleware(GZipMiddleware, minimum_size=GZIP_MIN_BYTES)
 if DEMO_PHOTOS_DIR.exists():
     # Снимки стенда отдаются файлами, а не вшиты в страницу: так она грузится быстро.
     app.mount("/demo/photos", StaticFiles(directory=DEMO_PHOTOS_DIR), name="demo-photos")
+
+
+def _start_run_from_frames(plan: bytes, plan_name: str, photos: list[tuple[str, bytes]]) -> str:
+    """Заводит прогон по снимкам, пришедшим с камер, и пускает разбор в фоне."""
+    state = storage.create()
+    storage.save_upload(storage.plan_dir(state.run_id) / plan_name, plan)
+    saved = sum(storage.save_photos(state.run_id, name, content) for name, content in photos)
+    state.plan_file = plan_name
+    state.photo_count = saved
+    storage.save(state)
+    worker = threading.Thread(target=_execute_run, args=(state.run_id,), daemon=True)
+    worker.start()
+    return state.run_id
+
+
+def _known_work_titles() -> dict[str, str]:
+    """Виды работ, у которых заданы правила по технике."""
+    titles = {
+        work_id: work.full_name.split(" → ")[-1]
+        for work_id, work in dependencies.works_by_id.items()
+        if work_id in dependencies.rules_by_work
+    }
+    return titles
+
+
+app.include_router(build_camera_router(watch))
+app.include_router(
+    build_ingest_router(settings.camera_inbox_path, _start_run_from_frames, _known_work_titles(), SIMULATOR_NOTE)
+)
 
 
 @app.get("/health")
