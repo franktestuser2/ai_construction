@@ -64,10 +64,11 @@ def _build_camera(item: dict[str, object]) -> Camera:
         camera_id=str(item["id"]),
         title=str(item["title"]),
         place=str(item.get("place", "")),
-        source=Path(str(item["source"])),
+        source=str(item["source"]),
         capture_period_minutes=int(item.get("capture_period_minutes", DEFAULT_PERIOD_MINUTES)),  # type: ignore[arg-type]
         safety_enabled=bool(item.get("safety_enabled", True)),
         people_source=str(item.get("people_source", MOTION_SOURCE)),
+        origin=str(item.get("origin", "")),
         notes=str(item.get("notes", "")),
     )
     return camera

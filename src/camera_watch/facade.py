@@ -253,6 +253,7 @@ class CameraWatchFacade:
         state = CameraState(
             camera=camera,
             frames_stored=len(frames),
+            last_photo=frames[0].file_name if frames else "",
             last_captured_at=frames[0].captured_at if frames else None,
             last_violation_at=violations[0].captured_at if violations else None,
             violations_total=sum(len(frame.violations) for frame in frames),

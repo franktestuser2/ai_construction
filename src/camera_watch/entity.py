@@ -9,6 +9,9 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
+# Источник камеры — либо файл с роликом, либо адрес живого потока.
+STREAM_SCHEMES = ("http://", "https://", "rtsp://", "rtmp://")
+
 PRESENT = "есть"
 ABSENT = "нет"
 UNCLEAR = "не ясно"
@@ -27,11 +30,18 @@ class Camera:
     camera_id: str
     title: str
     place: str
-    source: Path
+    source: str
     capture_period_minutes: int
     safety_enabled: bool = True
     people_source: str = MOTION_SOURCE
+    origin: str = ""
     notes: str = ""
+
+    @property
+    def is_live(self) -> bool:
+        """Живой поток или ролик на диске."""
+        live = self.source.startswith(STREAM_SCHEMES)
+        return live
 
 
 @dataclass(frozen=True, slots=True)
@@ -132,6 +142,7 @@ class CameraState:
 
     camera: Camera
     frames_stored: int = 0
+    last_photo: str = ""
     last_captured_at: datetime | None = None
     last_violation_at: datetime | None = None
     violations_total: int = 0

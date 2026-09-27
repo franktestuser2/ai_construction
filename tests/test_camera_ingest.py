@@ -82,9 +82,25 @@ def test_камеры_читаются_из_конфигурации() -> None:
     cameras = reader.read()
 
     # Assert
-    assert len(cameras) == 3
+    assert cameras
     assert all(camera.capture_period_minutes > 0 for camera in cameras)
-    assert all(camera.source.suffix == ".mp4" for camera in cameras)
+    assert all(camera.title and camera.place for camera in cameras)
+
+
+def test_источник_камеры_читается_и_файлом_и_потоком() -> None:
+    # Arrange
+    reader = CameraRegistryReader(PROJECT_ROOT / "config" / "cameras.json")
+
+    # Act
+    cameras = reader.read()
+    live = [camera for camera in cameras if camera.is_live]
+    recorded = [camera for camera in cameras if not camera.is_live]
+
+    # Assert
+    assert live and recorded
+    assert all(camera.source.startswith("http") for camera in live)
+    assert all(camera.origin for camera in live)
+    assert all(camera.source.endswith(".mp4") for camera in recorded)
 
 
 def test_проверки_охраны_труда_читаются_с_обоими_порогами() -> None:

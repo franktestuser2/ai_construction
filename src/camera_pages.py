@@ -14,7 +14,7 @@ NEVER = "ещё не снимали"
 PAGE_STYLE = """
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px}
 .cam{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
-.cam .live{position:relative;background:#000;aspect-ratio:16/9}
+.cam .live{position:relative;display:block;background:#000;aspect-ratio:16/9;text-decoration:none}
 .cam .live img{width:100%;height:100%;object-fit:cover;display:block}
 .cam .body{padding:12px 14px}
 .cam h3{margin:0 0 2px;font-size:15px}
@@ -43,6 +43,8 @@ PAGE_STYLE = """
 .badge{font-size:12px;font-weight:600;padding:2px 9px;border-radius:999px}
 .badge.sure{background:var(--bad-bg);color:var(--bad)}
 .badge.maybe{background:#fdf1de;color:#b26a00}
+.pill.live{background:var(--bad-bg);color:var(--bad)}
+.pill.rec{background:var(--bg);color:var(--muted);border:1px solid var(--line)}
 .measure{background:var(--bg);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;
          padding:10px 12px;margin-top:10px;font-size:13px;color:var(--muted)}
 """
@@ -129,14 +131,18 @@ def _camera_card(state: CameraState) -> str:
         if state.violations_total
         else '<span class="pill ok">отметок нет</span>'
     )
+    kind = (
+        '<span class="pill live">прямая трансляция</span>'
+        if camera.is_live
+        else '<span class="pill rec">демонстрационный ролик</span>'
+    )
     card = f"""<div class="cam">
-  <div class="live"><span class="onair"><i></i>ОНЛАЙН</span>
-    <img src="/cameras/{camera.camera_id}/stream" alt="{escape(camera.title)}"
-         onerror="this.src='/cameras/{camera.camera_id}/frame.jpg'"></div>
+  <a class="live" href="/cameras/{camera.camera_id}"><span class="onair"><i></i>СМОТРЕТЬ ОНЛАЙН</span>
+    <img src="{_preview(state)}" alt="{escape(camera.title)}" loading="lazy"></a>
   <div class="body">
     <h3><a href="/cameras/{camera.camera_id}">{escape(camera.title)}</a></h3>
     <p class="place">{escape(camera.place)}</p>
-    {violations}
+    {kind} {violations}
     <div class="meta"><span>снимок раз в <b>{camera.capture_period_minutes} мин</b></span>
       <span>в архиве <b>{state.frames_stored}</b></span>
       <span>не отправлено <b>{state.unsent_frames}</b></span></div>
@@ -145,6 +151,17 @@ def _camera_card(state: CameraState) -> str:
   </div>
 </div>"""
     return card
+
+
+def _preview(state: CameraState) -> str:
+    """Картинка плитки: последний снятый кадр, а пока его нет — кадр из камеры.
+
+    Живые потоки на плитках не открываются намеренно: шесть камер — это шесть
+    декодеров на сервере ради картинок величиной с ладонь.
+    """
+    if state.last_photo:
+        return f"/cameras/{state.camera.camera_id}/photos/{state.last_photo}"
+    return f"/cameras/{state.camera.camera_id}/frame.jpg"
 
 
 def _camera_actions(camera_id: str) -> str:
@@ -167,6 +184,7 @@ def _live_panel(camera: Camera, next_at: datetime) -> str:
   <div class="meta"><span>съёмка раз в <b>{camera.capture_period_minutes} мин</b></span>
     <span>следующий кадр: <b>{next_at.strftime(SHORT_TIME_FORMAT)}</b></span>
     <span>проверка охраны труда: <b>{"включена" if camera.safety_enabled else "выключена"}</b></span></div>
+  {f'<p class="note">{escape(camera.origin)}</p>' if camera.origin else ''}
   {f'<p class="note">{escape(camera.notes)}</p>' if camera.notes else ''}
   {_camera_actions(camera.camera_id)}
 </div>"""
@@ -193,6 +211,7 @@ def _archive_row(camera: Camera, frame: CapturedFrame, size: tuple[int, int]) ->
         if frame.clip_name
         else ""
     )
+    origin = "прямая трансляция" if camera.is_live else f"секунда ролика {frame.source_second:.1f}"
     row = f"""<div class="event"><div class="rowline">
   {_shot(camera.camera_id, frame, size)}
   <div class="text">
@@ -200,22 +219,39 @@ def _archive_row(camera: Camera, frame: CapturedFrame, size: tuple[int, int]) ->
     <div class="meta"><span>людей в кадре: <b>{len(frame.people)}</b></span>
       <span>отметок: <b>{len(frame.violations)}</b></span>
       <span>в основной сервис: <b>{escape(sent)}</b></span></div>
-    {_findings_list(frame)}
-    <p class="note">секунда ролика {frame.source_second:.1f}{clip}</p>
+    {_findings_list(frame, camera)}
+    <p class="note">{origin}{clip}</p>
   </div></div></div>"""
     return row
 
 
-def _findings_list(frame: CapturedFrame) -> str:
+def _findings_list(frame: CapturedFrame, camera: Camera) -> str:
     """Перечень находок кадра."""
     if not frame.findings:
-        return '<p class="note">Проверки по этому кадру не выполнялись.</p>'
+        return _nothing_checked(frame, camera)
     items = "".join(f"<li>{_finding_line(item)}</li>" for item in frame.violations)
     unclear = len(frame.unclear)
     tail = f'<p class="note">не разделено моделью: {unclear}</p>' if unclear else ""
     if not items:
         return f'<p class="note">Отметок нет.</p>{tail}'
     return f"<ul>{items}</ul>{tail}"
+
+
+def _nothing_checked(frame: CapturedFrame, camera: Camera) -> str:
+    """Объясняет, почему по кадру нет ни одной находки.
+
+    Пустой перечень читается как «нарушений нет», а это разные вещи: чаще всего
+    людей в кадре просто не нашлось или они слишком мелкие, чтобы судить о каске.
+    """
+    if not camera.safety_enabled:
+        return '<p class="note">Проверка охраны труда для этой камеры выключена.</p>'
+    if not frame.people:
+        return (
+            '<p class="note">Людей в кадре не нашлось — проверять было нечего. '
+            "Это не значит, что нарушений нет: на обзорной камере человек занимает "
+            "два десятка пикселей, и по такому силуэту о каске не судят.</p>"
+        )
+    return '<p class="note">Проверки по этому кадру не выполнялись.</p>'
 
 
 def _finding_line(finding: SafetyFinding) -> str:
