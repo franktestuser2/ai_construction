@@ -40,6 +40,9 @@ LABEL_SIZE = 20
 LABEL_PAD = 6
 HEAD_SHARE = 0.32
 HELMET_KEY = "нет_каски"
+VEST_KEY = "нет_жилета"
+PANEL_COLOR = (32, 32, 32)
+PANEL_TEXT = (235, 235, 235)
 NOTHING = 0
 
 
@@ -175,7 +178,11 @@ def _output_size(width: int, height: int) -> tuple[int, int]:
 def _draw(
     frame: np.ndarray, regions: tuple[PersonRegion, ...], findings: tuple[SafetyFinding, ...]
 ) -> np.ndarray:
-    """Рисует на кадре рамки людей и подписи нарушений."""
+    """Рисует на кадре рамки людей, подписи нарушений и сводку проверенного.
+
+    Сводка нужна не для красоты: без неё кадр, на котором все в касках, выглядит так,
+    будто каску никто и не проверял.
+    """
     picture = frame.copy()
     for region in regions:
         cv2.rectangle(picture, (region.left, region.top), (region.right, region.bottom), OK_COLOR, 1)
@@ -185,7 +192,23 @@ def _draw(
             continue
         labels.append(_draw_violation(picture, finding))
     marked = _draw_labels(picture, labels)
-    return marked
+    summed = _draw_summary(marked, regions, findings)
+    return summed
+
+
+def _draw_summary(
+    picture: np.ndarray, regions: tuple[PersonRegion, ...], findings: tuple[SafetyFinding, ...]
+) -> np.ndarray:
+    """Пишет в углу, что проверено и сколько нарушений нашлось."""
+    lines = [f"людей найдено: {len(regions)}"]
+    for key, title in ((HELMET_KEY, "каска"), (VEST_KEY, "жилет")):
+        checked = [item for item in findings if item.check_key == key]
+        if not checked:
+            lines.append(f"{title}: не проверялась — мелко в кадре")
+            continue
+        bad = sum(1 for item in checked if item.verdict == PRESENT)
+        lines.append(f"{title}: проверено {len(checked)}, нарушений {bad}")
+    return _draw_panel(picture, lines)
 
 
 def _draw_violation(picture: np.ndarray, finding: SafetyFinding) -> tuple[str, int, int]:
@@ -216,6 +239,21 @@ def _draw_labels(picture: np.ndarray, labels: list[tuple[str, int, int]]) -> np.
             fill=BAD_COLOR[::-1],
         )
         canvas.text((left + LABEL_PAD, bottom - height - LABEL_PAD), text, font=font, fill=(255, 255, 255))
+    return np.asarray(image)[:, :, ::-1].copy()
+
+
+def _draw_panel(picture: np.ndarray, lines: list[str]) -> np.ndarray:
+    """Рисует в левом верхнем углу тёмную подложку со строками сводки."""
+    from PIL import Image, ImageDraw, ImageFont
+
+    image = Image.fromarray(picture[:, :, ::-1])
+    canvas = ImageDraw.Draw(image, "RGBA")
+    font = _label_font(ImageFont)
+    widths = [canvas.textbbox((0, 0), line, font=font)[2] for line in lines]
+    height = (LABEL_SIZE + 8) * len(lines) + LABEL_PAD
+    canvas.rectangle((8, 8, 18 + max(widths), 8 + height), fill=(*PANEL_COLOR, 205))
+    for number, line in enumerate(lines):
+        canvas.text((14, 12 + number * (LABEL_SIZE + 8)), line, font=font, fill=PANEL_TEXT)
     return np.asarray(image)[:, :, ::-1].copy()
 
 

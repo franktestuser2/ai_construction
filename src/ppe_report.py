@@ -49,6 +49,7 @@ DEFAULT_EVERY = 1.5
 PAGE_NAME = "index.html"
 SAFETY_URL = "/safety"
 NOTHING = 0
+CHECK_TITLES = (("нет_каски", "каска"), ("нет_жилета", "жилет"))
 
 
 @dataclass(frozen=True, slots=True)
@@ -346,20 +347,31 @@ def _card(result: FrameResult) -> str:
 
 
 def _findings(result: FrameResult) -> str:
-    """Перечень находок кадра словами."""
+    """Перечень находок кадра словами.
+
+    Показывается и то, что проверено без нарушений: иначе кадр, на котором все в касках,
+    читается так, будто каску никто и не смотрел.
+    """
     if not result.people:
         return '<p class="none">Людей крупнее порога в кадре нет — проверять нечего.</p>'
+    checked = "; ".join(_checked_line(result, key, title) for key, title in CHECK_TITLES)
     violations = result.violations
+    head = f'<p class="note">Людей: {len(result.people)}. {checked}.</p>'
     if not violations:
-        return (
-            f'<p class="none">Людей: {len(result.people)}. Нарушений не отмечено'
-            f'{f", без ответа {result.unclear}" if result.unclear else ""}.</p>'
-        )
+        return head + '<p class="none">Нарушений не отмечено.</p>'
     items = "".join(
         f'<li class="bad">{escape(item.title)} — уверенность {item.confidence:.2f}</li>'
         for item in violations
     )
-    return f"<p class=\"note\">Людей: {len(result.people)}</p><ul>{items}</ul>"
+    return head + f"<ul>{items}</ul>"
+
+
+def _checked_line(result: FrameResult, key: str, title: str) -> str:
+    """Сколько человек проверено этой проверкой на кадре."""
+    checked = [item for item in result.findings if item.check_key == key]
+    if not checked:
+        return f"{title} — мелко, не судим"
+    return f"{title} проверена у {len(checked)}"
 
 
 def _box(finding: SafetyFinding, result: FrameResult) -> str:

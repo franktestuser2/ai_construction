@@ -191,6 +191,9 @@ tr.idle td{opacity:.5}
 .explain h3{margin:0 0 6px;font-size:14px}
 .explain p{margin:0 0 6px;font-size:13px;color:var(--muted)}
 .explain p:last-child{margin-bottom:0}
+.legend-card{border:1px dashed var(--det);border-radius:12px;padding:14px 16px 4px;margin-bottom:26px}
+.legend-title{font-size:15px;margin:0 0 10px;color:var(--det)}
+.legend-card .legendbox:first-of-type{border-top:none;padding-top:0}
 .legendbox{border-top:1px solid var(--line);padding-top:10px;margin-bottom:10px}
 .legendbox h3{margin:0 0 6px;font-size:13px}
 .legendbox .note{margin:0 0 6px}
@@ -249,6 +252,9 @@ __NAV__
         процент выполнения: подтверждённые отрезки к тем, которые удалось измерить.</p>
       </div>
 
+      <div class="legend-card">
+      <h2 class="legend-title">Условные обозначения</h2>
+
       <div class="legendbox">
         <h3>W01–W06: этапы, где работу подтверждает техника</h3>
         <div class="shiftlegend">
@@ -276,6 +282,7 @@ __NAV__
           <span><i class="chip" style="background:var(--warn)"></i>фронт работ не виден: вне контроля ИИ, нужна ручная проверка</span>
           <span><i class="chip" style="background:var(--vlm)"></i>на кадре техника не по этапу — отклонение</span>
         </div>
+      </div>
       </div>
 
       <div class="ganttwrap"><div id="shifts"></div></div>
@@ -328,8 +335,14 @@ const colorOf = cls => getComputedStyle(document.documentElement).getPropertyVal
 const ru = iso => new Date(iso).toLocaleDateString('ru-RU', {day:'2-digit', month:'short', year:'numeric'});
 const esc = s => String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
 
-document.getElementById('subtitle').textContent =
-  `${DATA.object} · проект ${DATA.project_id} · план ${ru(DATA.start)} — ${ru(DATA.finish)} · ${DATA.duration_days} дней · ${frames.length} снимков · сборка ${DATA.built_at}`;
+// Подпись описывает то, что на странице: смены и их снимки. Полный план проекта идёт
+// на 294 дня, и показывать его сроки рядом с семью сменами значило бы путать.
+const shiftDays = (DATA.shifts || []).map(s => s.plan_date).filter(Boolean).sort();
+const shotCount = (DATA.shifts || []).reduce(
+  (sum, s) => sum + s.slots.filter(slot => slot.frame_id).length, 0);
+document.getElementById('subtitle').textContent = shiftDays.length
+  ? `${DATA.object} · проект ${DATA.project_id} · смен ${DATA.shifts.length}: ${ru(shiftDays[0])} — ${ru(shiftDays[shiftDays.length-1])} · ${shotCount} снимков · сборка ${DATA.built_at}`
+  : `${DATA.object} · проект ${DATA.project_id} · сборка ${DATA.built_at}`;
 
 function renderStrip(){
   document.getElementById('strip').innerHTML = frames.map((f, i) =>
@@ -579,8 +592,13 @@ function openSlot(button){
     ? renderFacadeOverlay(reading, photo, overlay)
     : renderOverlayInto(found, photo, overlay, true);
   photo.onload = draw;
+  photo.onerror = () => {
+    document.getElementById('sh-caption').innerHTML =
+      `<h2>Снимок не открылся</h2><p class="note">${esc(slot.frame_id)} — файл не отдался сервисом.</p>`;
+  };
   photo.src = DATA.images[slot.frame_id] || '';
   draw();
+  document.getElementById('sh-viewer').classList.remove('empty');
   const stripes = ['equipment','kit','motion'].filter(name => slot['has_' + name]).map(name => STRIPE_TITLES[name]);
   document.getElementById('sh-caption').innerHTML =
     `<h2>${esc(shift.work_id)} · ${slotTime(slot.starts_at)}</h2>

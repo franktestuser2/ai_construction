@@ -47,7 +47,11 @@ LOGIT_SCALE = 100.0
 DEFAULT_PERSON_PADDING = 30
 # Ниже этой высоты вырезки судить о каске нельзя: на съёмке с дрона голова рабочего
 # занимает сорок пикселей, и модель отмечала каску отсутствующей у всех подряд.
-MIN_HEAD_PIXELS = 70
+MIN_HEAD_PIXELS = 40
+# Тот же порог для жилета, но по фигуре целиком. Замер по высоте вырезки: на 140-220
+# пикселях AUC 0,74 и точность 0,14 — на дальнем плане рабочий в оранжевом жилете
+# получал отметку «без жилета». Выше 220 пикселей AUC 0,93 и точность 0,80.
+MIN_BODY_PIXELS = 220
 ROUND_DIGITS = 4
 
 
@@ -139,7 +143,7 @@ class SafetyAssessmentService:
         if not checks:
             return []
         piece = crop_region(frame, region, self._person_padding)
-        if piece.size == 0:
+        if piece.size == 0 or piece.shape[0] < MIN_BODY_PIXELS:
             return []
         findings = [self._judge(check, piece, vectors, region.box) for check in checks]
         return findings
