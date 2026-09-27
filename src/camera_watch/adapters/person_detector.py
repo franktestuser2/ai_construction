@@ -23,6 +23,10 @@ logger = logging.getLogger(__name__)
 PERSON_LABEL = 1
 SCORE_THRESHOLD = 0.5
 MIN_PERSON_HEIGHT = 80
+# Стоящий человек ростом 145 пикселей занимает в ширину полсотни, а не двадцать.
+# Без этого правила детектор отдавал за человека узкую вертикальную полосу у края
+# кадра — и отдавал её на каждом снимке подряд, набивая ленту одной и той же ошибкой.
+MIN_WIDTH_TO_HEIGHT = 0.25
 COLOR_SCALE = 255.0
 MAX_REGIONS = 12
 
@@ -35,10 +39,12 @@ class PersonDetector:
         score_threshold: float = SCORE_THRESHOLD,
         min_height: int = MIN_PERSON_HEIGHT,
         max_regions: int = MAX_REGIONS,
+        min_ratio: float = MIN_WIDTH_TO_HEIGHT,
     ) -> None:
         self._score_threshold = score_threshold
         self._min_height = min_height
         self._max_regions = max_regions
+        self._min_ratio = min_ratio
         self._lock = threading.Lock()
         self._model: Any = None
 
@@ -59,7 +65,7 @@ class PersonDetector:
             self._load()
             with torch.no_grad():
                 output = self._model([tensor])[0]
-        boxes = _filter_people(output, self._score_threshold, self._min_height)
+        boxes = _filter_people(output, self._score_threshold, self._min_height, self._min_ratio)
         return boxes
 
     def _to_tensor(self, frame: np.ndarray) -> Any:
@@ -85,14 +91,24 @@ class PersonDetector:
         logger.info("Детектор людей поднят, веса %s", weights.name)
 
 
-def _filter_people(output: Any, score_threshold: float, min_height: int) -> list[tuple[int, int, int, int]]:
-    """Оставляет рамки людей, прошедшие порог уверенности и порог роста."""
+def _filter_people(
+    output: Any, score_threshold: float, min_height: int, min_ratio: float
+) -> list[tuple[int, int, int, int]]:
+    """Оставляет рамки людей, прошедшие пороги уверенности, роста и пропорций."""
     boxes: list[tuple[int, int, int, int]] = []
     for box, label, score in zip(output["boxes"], output["labels"], output["scores"]):
         if int(label) != PERSON_LABEL or float(score) < score_threshold:
             continue
         left, top, right, bottom = (int(round(float(value))) for value in box)
-        if bottom - top < min_height:
+        if not _looks_like_person(right - left, bottom - top, min_height, min_ratio):
             continue
         boxes.append((left, top, right, bottom))
     return boxes
+
+
+def _looks_like_person(width: int, height: int, min_height: int, min_ratio: float) -> bool:
+    """Проверяет рост и пропорции рамки: слишком узкая полоса человеком не бывает."""
+    if height < min_height:
+        return False
+    fits = width / max(height, 1) >= min_ratio
+    return fits

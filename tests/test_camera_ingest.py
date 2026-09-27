@@ -171,3 +171,18 @@ def test_очередь_чистится_по_сроку_хранения(tmp_pa
     # Assert
     assert removed == 1
     assert _queue(inbox) == {"gate": 1}
+
+
+def test_узкая_полоса_человеком_не_считается() -> None:
+    # Arrange: рост 145 при ширине 23 — так стоящий человек не выглядит
+    from camera_watch.adapters.person_detector import _looks_like_person
+
+    # Act
+    sliver = _looks_like_person(width=23, height=145, min_height=80, min_ratio=0.25)
+    person = _looks_like_person(width=52, height=145, min_height=80, min_ratio=0.25)
+    short = _looks_like_person(width=30, height=60, min_height=80, min_ratio=0.25)
+
+    # Assert
+    assert sliver is False
+    assert person is True
+    assert short is False
