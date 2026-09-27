@@ -50,6 +50,7 @@ PAGE_NAME = "index.html"
 SAFETY_URL = "/safety"
 NOTHING = 0
 CHECK_TITLES = (("нет_каски", "каска"), ("нет_жилета", "жилет"))
+HEAD_SHARE = 0.32
 
 
 @dataclass(frozen=True, slots=True)
@@ -218,12 +219,14 @@ PAGE_STYLE = """
 .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
 .card .pic{position:relative;display:block;line-height:0}
 .card .pic img{width:100%;display:block}
-.card b.box{position:absolute;border:2px solid #21c07a;border-radius:3px}
-.card b.box.bad{border-color:#ff4d4f}
+.card b.box{position:absolute;background:none;border:2px solid #21c07a;border-radius:3px;
+            box-shadow:0 0 0 1px rgba(0,0,0,.35)}
+.card b.box.alarm{border-color:#ff4d4f}
+.card b.box.head{border-style:dashed}
 .card .body{padding:11px 13px}
 .card h3{margin:0 0 6px;font-size:13px;color:var(--muted);font-weight:600;word-break:break-all}
 .card ul{margin:6px 0 0;padding-left:18px;font-size:13px}
-.card li.bad{color:var(--bad)}
+.card li.mark{color:var(--bad);background:none}
 .card .none{font-size:13px;color:var(--ok)}
 .vids{display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:14px;margin-top:12px}
 .vid{background:var(--bg);border:1px solid var(--line);border-radius:12px;overflow:hidden}
@@ -360,7 +363,7 @@ def _findings(result: FrameResult) -> str:
     if not violations:
         return head + '<p class="none">Нарушений не отмечено.</p>'
     items = "".join(
-        f'<li class="bad">{escape(item.title)} — уверенность {item.confidence:.2f}</li>'
+        f'<li class="mark">{escape(item.title)} — уверенность {item.confidence:.2f}</li>'
         for item in violations
     )
     return head + f"<ul>{items}</ul>"
@@ -377,12 +380,15 @@ def _checked_line(result: FrameResult, key: str, title: str) -> str:
 def _box(finding: SafetyFinding, result: FrameResult) -> str:
     """Рамка находки поверх кадра в долях его размера."""
     left, top, right, bottom = finding.box  # type: ignore[misc]
-    bad = " bad" if finding.verdict == PRESENT else ""
+    alarm = " alarm" if finding.verdict == PRESENT else ""
+    head = ""
     if finding.check_key.endswith("каски") or finding.check_key == HEAD_SCOPE:
-        bottom = top + int((bottom - top) * 0.32)
+        # Рамка каски это верхняя треть фигуры, и её надо отличать от рамки всей фигуры.
+        bottom = top + int((bottom - top) * HEAD_SHARE)
+        head = " head"
     style = (
         f"left:{100 * left / result.width:.2f}%;top:{100 * top / result.height:.2f}%;"
         f"width:{100 * (right - left) / result.width:.2f}%;"
         f"height:{100 * (bottom - top) / result.height:.2f}%"
     )
-    return f'<b class="box{bad}" style="{style}"></b>'
+    return f'<b class="box{alarm}{head}" style="{style}"></b>'
