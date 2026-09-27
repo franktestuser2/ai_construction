@@ -124,9 +124,9 @@ def build_camera_router(watch: CameraWatchFacade, keep_hours: int) -> APIRouter:
             raise HTTPException(status_code=404, detail=NO_CLIP_MESSAGE)
         return FileResponse(target)
 
-    @router.get("/safety/ppe", response_class=HTMLResponse)
-    def safety_ppe() -> FileResponse:
-        """Разбор касок и жилетов по присланным фотографиям и роликам."""
+    @router.get("/safety", response_class=HTMLResponse)
+    def safety_page() -> FileResponse:
+        """Охрана труда: разбор касок и жилетов на фотографиях и роликах."""
         if not PPE_PAGE.exists():
             raise HTTPException(status_code=404, detail=NO_PPE_MESSAGE)
         return FileResponse(PPE_PAGE)
@@ -147,8 +147,8 @@ def build_camera_router(watch: CameraWatchFacade, keep_hours: int) -> APIRouter:
             raise HTTPException(status_code=404, detail=NO_PHOTO_MESSAGE)
         return FileResponse(target)
 
-    @router.get("/safety", response_class=HTMLResponse)
-    def safety_page() -> HTMLResponse:
+    @router.get("/safety/events", response_class=HTMLResponse)
+    def safety_events() -> HTMLResponse:
         """Лента отметок охраны труда по всем камерам."""
         events = watch.safety_events(EVENTS_LIMIT)
         sizes = {camera.camera_id: _size(watch, camera.camera_id) for camera in watch.cameras()}

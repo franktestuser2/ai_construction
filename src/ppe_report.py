@@ -9,8 +9,9 @@
 в том, откуда взялся кадр.
 """
 
+import json
 import logging
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from html import escape
 from pathlib import Path
 
@@ -42,6 +43,7 @@ FILE_KEY = "файл"
 NOTE_KEY = "подпись"
 SECONDS_KEY = "секунд"
 EVERY_KEY = "разбор_каждые"
+SUMMARY_SUFFIX = ".json"
 DEFAULT_SECONDS = 8.0
 DEFAULT_EVERY = 1.5
 PAGE_NAME = "index.html"
@@ -83,11 +85,13 @@ class PpeReportBuilder:
         annotator: VideoAnnotator,
         source_dir: Path,
         output_dir: Path,
+        reuse_marked: bool = False,
     ) -> None:
         self._assessment = assessment
         self._annotator = annotator
         self._source_dir = source_dir
         self._output_dir = output_dir
+        self._reuse_marked = reuse_marked
 
     def build(self, selection: dict[str, object]) -> tuple[tuple[FrameResult, ...], tuple[tuple[VideoSummary, str], ...]]:
         """Размечает ролики, разбирает фотографии и пишет страницу."""
@@ -101,21 +105,37 @@ class PpeReportBuilder:
         return photos, videos
 
     def _annotate_videos(self, items: list[dict[str, object]]) -> tuple[tuple[VideoSummary, str], ...]:
-        """Размечает каждый ролик из отбора."""
+        """Размечает каждый ролик из отбора.
+
+        Уже размеченный ролик переразмечается только по просьбе: разметка стоит минуты,
+        а правка текста на странице — секунды, и гонять модели ради неё незачем.
+        """
         videos_dir = self._output_dir / VIDEOS_DIR_NAME
         videos_dir.mkdir(parents=True, exist_ok=True)
         marked = []
         for item in items:
             name = str(item[FILE_KEY])
             target = videos_dir / f"{Path(name).stem}.webm"
-            summary = self._annotator.annotate(
-                self._source_dir / name,
-                target,
-                max_seconds=float(item.get(SECONDS_KEY, DEFAULT_SECONDS)),  # type: ignore[arg-type]
-                check_every=float(item.get(EVERY_KEY, DEFAULT_EVERY)),  # type: ignore[arg-type]
-            )
+            summary = self._reuse(target) if self._reuse_marked else None
+            if summary is None:
+                summary = self._annotator.annotate(
+                    self._source_dir / name,
+                    target,
+                    max_seconds=float(item.get(SECONDS_KEY, DEFAULT_SECONDS)),  # type: ignore[arg-type]
+                    check_every=float(item.get(EVERY_KEY, DEFAULT_EVERY)),  # type: ignore[arg-type]
+                )
+                _store_summary(target, summary)
             marked.append((summary, str(item.get(NOTE_KEY, ""))))
         return tuple(marked)
+
+    def _reuse(self, target: Path) -> VideoSummary | None:
+        """Берёт готовую разметку ролика, если она уже посчитана."""
+        record = target.with_suffix(SUMMARY_SUFFIX)
+        if not target.exists() or not record.exists():
+            return None
+        payload = json.loads(record.read_text(encoding="utf-8"))
+        logger.info("Ролик %s взят готовым", target.name)
+        return VideoSummary(**payload)
 
     def _assess_photos(
         self, items: list[dict[str, object]], frames_dir: Path
@@ -153,6 +173,13 @@ class PpeReportBuilder:
         return result
 
 
+def _store_summary(target: Path, summary: VideoSummary) -> None:
+    """Кладёт итог разметки рядом с роликом, чтобы не считать его заново."""
+    target.with_suffix(SUMMARY_SUFFIX).write_text(
+        json.dumps(asdict(summary), ensure_ascii=False, indent=1), encoding="utf-8"
+    )
+
+
 def _fit(image: np.ndarray) -> np.ndarray:
     """Уменьшает кадр до рабочего размера: детектор всё равно сожмёт его сам."""
     height, width = image.shape[:2]
@@ -178,7 +205,7 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Проверка СИЗ</title><style>{style}{page_style}</style></head>
 <body>{header}<div class="wrap">
-<h1>Каски и жилеты на фото и видео<span class="svc extra">дополнительный сервис</span></h1>
+<h1>Охрана труда<span class="svc extra">дополнительный сервис</span></h1>
 <p class="sub">{lead}</p>
 {summary}
 {videos}
@@ -213,14 +240,29 @@ def render_ppe_page(
         style=STYLE,
         page_style=PAGE_STYLE,
         header=render_header(SAFETY_URL),
-        lead="Один и тот же разбор работает и по фотографии, и по видео. На ролике рамки "
-        "нарисованы прямо на кадрах: красная — отметка нарушения, зелёная — найденный "
-        "человек, у которого каска и жилет на месте.",
+        lead="Сервис находит людей в кадре и проверяет каску и жилет. Работает одинаково "
+        "по фотографии и по видео: на ролике рамки нарисованы прямо на кадрах — красная "
+        "отметка нарушения, зелёная — человек, у которого всё на месте.",
         summary=_summary(photos, videos),
         videos=_videos_block(videos),
-        cards=_photos_block(photos),
+        cards=_photos_block(photos) + _cameras_panel(),
     )
     return page
+
+
+def _cameras_panel() -> str:
+    """Почему на камерах объекта проверка выключена и где её место."""
+    panel = """<div class="panel"><h2>Почему этого нет на камерах объекта</h2>
+<p class="note">Проверка судит о человеке ростом не ниже 80 пикселей в кадре, а для каски
+вырезка головы должна быть выше 70. На обзорных камерах объекта столько не бывает — человек
+занимает там два десятка пикселей, — поэтому проверка на них выключена, а не показывает шум.
+Лента отметок по камерам: <a href="/safety/events">события камер</a>.</p>
+<p class="note">Встроить проверку в наблюдение за площадкой можно там, где камера стоит
+близко к людям: проходная, бытовки, вход в зону работ, обход с телефоном, съёмка с дрона
+в высоком разрешении. Календарного плана ей не нужно — каска не зависит от того, какой
+сегодня этап, — и основному алгоритму она не мешает: разбор идёт по тому же кадру, а
+результат отдельной лентой с кадром-доказательством.</p></div>"""
+    return panel
 
 
 def _videos_block(videos: tuple[tuple[VideoSummary, str], ...]) -> str:
@@ -283,9 +325,11 @@ def _summary(
 разные вырезки, и мерялись они порознь. Человек ниже 80 пикселей в разбор не идёт вовсе,
 а о каске не судят, пока вырезка головы меньше 70 пикселей: на съёмке с дрона голова
 занимает сорок, и проверка отмечала отсутствие каски у всех подряд.</p>
-<p class="note">Замер по размеченным вручную снимкам: каска — полнота 0,82 при точности
-0,69; жилет — полнота 0,80 при точности 0,50. Это отбор кандидатов на просмотр человеком,
-а не протоколирование нарушений.</p></div>"""
+<p class="note">Каску и жилет определяют обученные сети ResNet-18, а не сравнение текстовых
+описаний. Замер на отложенной выборке открытых размеченных наборов: каска — полнота 0,78
+при точности 0,87, жилет — 0,87 и 0,77. Отметка означает «посмотрите кадр», а не
+установленный факт: одна отметка из восьми по каске и одна из четырёх по жилету ложные.</p>
+</div>"""
     return panel
 
 

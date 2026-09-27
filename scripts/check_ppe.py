@@ -61,6 +61,7 @@ def main() -> int:
     parser.add_argument("--source", default=str(DEFAULT_SOURCE))
     parser.add_argument("--output", default=str(DEFAULT_OUTPUT))
     parser.add_argument("--selection", default=str(DEFAULT_SELECTION))
+    parser.add_argument("--reuse", action="store_true", help="не переразмечать готовые ролики")
     args = parser.parse_args()
 
     settings = Settings()
@@ -74,6 +75,7 @@ def main() -> int:
         annotator=VideoAnnotator(service),
         source_dir=Path(args.source),
         output_dir=Path(args.output),
+        reuse_marked=args.reuse,
     )
     photos, videos = builder.build(selection)
     logger.info("Роликов %d, фотографий %d", len(videos), len(photos))
