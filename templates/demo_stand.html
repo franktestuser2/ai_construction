@@ -111,6 +111,14 @@ main{max-width:1400px;margin:0 auto;padding:16px}
 .dates .k{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.03em}
 .comment{font-size:12px;color:var(--muted)}
 #sh-viewer.empty .viewgrid{display:none}
+#sh-viewer:not(.empty) .slot-hint{display:none}
+.slot-hint{display:flex;gap:16px;align-items:center}
+.slot-hint b{font-size:15px}
+.slot-hint .note{margin:4px 0 0;max-width:640px}
+.slot-hint-box{flex:none;width:64px;height:64px;border-radius:14px;display:grid;place-items:center;
+               background:var(--bg);border:1px dashed var(--line)}
+.slot-hint-box svg{width:30px;height:30px;fill:none;stroke:var(--muted);stroke-width:2;
+                   stroke-linejoin:round}
 .viewgrid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(280px,1fr);gap:14px;align-items:start}
 @media (max-width:900px){.viewgrid{grid-template-columns:1fr}}
 .hint{font-size:13px;color:var(--muted);margin:0}
@@ -233,6 +241,18 @@ __NAV__
 
   <section class="view" id="view-shifts">
     <div class="panel" id="sh-viewer">
+      <div class="slot-hint">
+        <div class="slot-hint-box">
+          <svg viewBox="0 0 48 48" aria-hidden="true"><rect x="5.5" y="10.5" width="37" height="27" rx="3"/>
+            <circle cx="24" cy="24" r="7"/><path d="M17 10.5l3-4h8l3 4"/></svg>
+        </div>
+        <div>
+          <b>Здесь появится снимок отрезка</b>
+          <p class="note">Нажмите любой отрезок в таблице ниже — откроется кадр, снятый в это
+          время, с рамками находок, перечнем техники и разбором движения относительно
+          предыдущего кадра.</p>
+        </div>
+      </div>
       <div class="viewgrid">
         <div class="stagewrap">
           <img id="sh-photo" alt="">
