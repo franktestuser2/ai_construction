@@ -42,7 +42,7 @@ def build_camera_router(watch: CameraWatchFacade) -> APIRouter:
     def cameras_page() -> HTMLResponse:
         """Страница со всеми камерами."""
         states = watch.states(datetime.now())
-        page = render_cameras(states, watch.safety_checks())
+        page = render_cameras(states)
         return HTMLResponse(page)
 
     @router.get("/cameras/{camera_id}", response_class=HTMLResponse)

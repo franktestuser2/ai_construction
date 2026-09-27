@@ -60,18 +60,19 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
 </div></body></html>"""
 
 
-def render_cameras(states: tuple[CameraState, ...], checks: tuple[SafetyCheck, ...]) -> str:
+def render_cameras(states: tuple[CameraState, ...]) -> str:
     """Страница со всеми камерами: картинка онлайн и состояние съёмки."""
     cards = "".join(_camera_card(state) for state in states)
-    body = f'<div class="grid">{cards}</div>{_checks_panel(checks)}' if states else _empty_panel()
+    body = f'<div class="grid">{cards}</div>' if states else _empty_panel()
     page = PAGE_TEMPLATE.format(
         title="Камеры площадки",
         style=STYLE,
         page_style=PAGE_STYLE,
         header=render_header(CAMERAS_URL),
         heading="Камеры площадки",
-        lead="Картинка идёт онлайн, кадр снимается по расписанию и уходит в основной сервис. "
-        "Все смотрящие видят одну и ту же секунду: положение считается от часов сервера.",
+        lead="Каждая камера снимает кадр по расписанию, хранит его и отдаёт основному сервису — "
+        "оттуда берутся снимки для сверки с календарным планом. По клику открывается живой "
+        "просмотр и весь архив съёмки.",
         body=body,
     )
     return page
@@ -156,8 +157,8 @@ def _camera_card(state: CameraState) -> str:
 def _preview(state: CameraState) -> str:
     """Картинка плитки: последний снятый кадр, а пока его нет — кадр из камеры.
 
-    Живые потоки на плитках не открываются намеренно: шесть камер — это шесть
-    декодеров на сервере ради картинок величиной с ладонь.
+    Живые потоки на плитках не открываются намеренно: каждая открытая плитка
+    держала бы на сервере свой декодер ради картинки величиной с ладонь.
     """
     if state.last_photo:
         return f"/cameras/{state.camera.camera_id}/photos/{state.last_photo}"

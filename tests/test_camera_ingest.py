@@ -1,5 +1,6 @@
 """Тесты приёмной: очередь снимков с камер и план, составляемый под них."""
 
+import json
 from datetime import date
 from pathlib import Path
 
@@ -87,20 +88,49 @@ def test_камеры_читаются_из_конфигурации() -> None:
     assert all(camera.title and camera.place for camera in cameras)
 
 
-def test_источник_камеры_читается_и_файлом_и_потоком() -> None:
+def test_источник_камеры_читается_и_файлом_и_потоком(tmp_path: Path) -> None:
+    # Arrange
+    payload = {
+        "cameras": [
+            {
+                "id": "live",
+                "title": "Живая",
+                "place": "Площадка",
+                "source": "https://example.test/hls/stream.m3u8",
+                "capture_period_minutes": 20,
+                "origin": "Публичная трансляция",
+            },
+            {
+                "id": "file",
+                "title": "Ролик",
+                "place": "Площадка",
+                "source": "data/cameras/scenes/gate.mp4",
+                "capture_period_minutes": 20,
+            },
+        ]
+    }
+    target = tmp_path / "cameras.json"
+    target.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+
+    # Act
+    cameras = CameraRegistryReader(target).read()
+
+    # Assert
+    assert [camera.is_live for camera in cameras] == [True, False]
+    assert cameras[0].origin == "Публичная трансляция"
+
+
+def test_подключённые_камеры_это_живые_трансляции() -> None:
     # Arrange
     reader = CameraRegistryReader(PROJECT_ROOT / "config" / "cameras.json")
 
     # Act
     cameras = reader.read()
-    live = [camera for camera in cameras if camera.is_live]
-    recorded = [camera for camera in cameras if not camera.is_live]
 
     # Assert
-    assert live and recorded
-    assert all(camera.source.startswith("http") for camera in live)
-    assert all(camera.origin for camera in live)
-    assert all(camera.source.endswith(".mp4") for camera in recorded)
+    assert cameras
+    assert all(camera.is_live for camera in cameras)
+    assert all(camera.origin for camera in cameras)
 
 
 def test_проверки_охраны_труда_читаются_с_обоими_порогами() -> None:
