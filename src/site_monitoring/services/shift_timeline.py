@@ -40,6 +40,7 @@ logger = logging.getLogger(__name__)
 
 NOTHING_FOUND = 0
 FIRST_SLOT_INDEX = 0
+SECONDS_IN_MINUTE = 60
 # Доли ячеек ниже этого сдвига списываем на шум детектора, а не на работу.
 FACADE_CHANGE_THRESHOLD = 0.05
 
@@ -103,8 +104,11 @@ class ShiftTimelineService:
 
     def build_timeline(self, rules: WorkEquipmentRules, frames: ShiftFrames) -> ShiftTimeline:
         """Раскладывает смену по слотам и отмечает, какие из них засчитаны."""
+        places = self._places(frames)
         builder = self._facade_slot if frames.is_facade else self._equipment_slot
-        slots = tuple(builder(index, rules, frames) for index in range(self._slots_per_shift))
+        slots = tuple(
+            builder(index, rules, frames, places) for index in range(self._slots_per_shift)
+        )
         timeline = ShiftTimeline(
             plan_date=frames.plan_entry.plan_date,
             work_id=frames.plan_entry.work_id,
@@ -120,17 +124,20 @@ class ShiftTimelineService:
         )
         return timeline
 
-    def _equipment_slot(self, index: int, rules: WorkEquipmentRules, frames: ShiftFrames) -> ShiftSlot:
+    def _equipment_slot(
+        self, index: int, rules: WorkEquipmentRules, frames: ShiftFrames, places: dict[int, int]
+    ) -> ShiftSlot:
         """Собирает слот обычного этапа: техника, комплект и её работа между кадрами."""
         observations = frames.observations
-        observation = observations[index] if index < len(observations) else None
-        motion = frames.motions[index] if index < len(frames.motions) else None
+        place = places.get(index)
+        observation = observations[place] if place is not None and place < len(observations) else None
+        motion = frames.motions[place] if place is not None and place < len(frames.motions) else None
         # Комплект — признак всей смены: вторая или третья машина должна появиться
         # хотя бы раз за день, а не в каждом слоте отдельно.
         kit_collected = self._is_kit_collected(rules, observations)
         slot = ShiftSlot(
             index=index,
-            starts_at=self._slot_start(frames.plan_entry, index),
+            starts_at=self._slot_start(frames, index),
             frame_id=observation.frame_id if observation is not None else None,
             has_equipment=self._has_equipment(rules, observation),
             has_kit=kit_collected and observation is not None,
@@ -141,14 +148,22 @@ class ShiftTimelineService:
         )
         return slot
 
-    def _facade_slot(self, index: int, rules: WorkEquipmentRules, frames: ShiftFrames) -> ShiftSlot:
+    def _facade_slot(
+        self, index: int, rules: WorkEquipmentRules, frames: ShiftFrames, places: dict[int, int]
+    ) -> ShiftSlot:
         """Собирает слот фасадного этапа: здание, ячейки и изменение их состава."""
-        readiness = frames.facade[index] if index < len(frames.facade) else None
-        previous = frames.facade[index - 1] if FIRST_SLOT_INDEX < index <= len(frames.facade) else None
-        frame_id = frames.frame_ids[index] if index < len(frames.frame_ids) else None
+        place = places.get(index)
+        previous_place = places.get(index - 1)
+        readiness = frames.facade[place] if place is not None and place < len(frames.facade) else None
+        previous = (
+            frames.facade[previous_place]
+            if previous_place is not None and previous_place < len(frames.facade)
+            else None
+        )
+        frame_id = frames.frame_ids[place] if place is not None and place < len(frames.frame_ids) else None
         slot = ShiftSlot(
             index=index,
-            starts_at=self._slot_start(frames.plan_entry, index),
+            starts_at=self._slot_start(frames, index),
             frame_id=frame_id,
             has_equipment=readiness is not None,
             has_kit=readiness is not None and readiness.cells_total > NOTHING_FOUND,
@@ -159,9 +174,36 @@ class ShiftTimelineService:
         )
         return slot
 
-    def _slot_start(self, plan_entry: PlanEntry, index: int) -> datetime:
+    def _places(self, frames: ShiftFrames) -> dict[int, int]:
+        """Раскладывает кадры по отрезкам смены: какой кадр в каком отрезке.
+
+        Отрезок определяется временем съёмки, а не порядком кадра в списке. Разница
+        видна, когда камера пропустила круг: при раскладке по порядку все последующие
+        кадры сдвинулись бы влево, и пропуск в середине смены выглядел бы работой.
+
+        Отсчёт идёт от первого кадра дня, а не от часа смены в настройках: когда именно
+        на площадке началась смена, сервис не знает — он знает, когда её впервые увидел.
+        """
+        stamps = frames.captured_at
+        if not stamps or all(item is None for item in stamps):
+            return {index: index for index in range(len(frames.frame_ids))}
+        base = next(item for item in stamps if item is not None)
+        places: dict[int, int] = {}
+        for position, stamp in enumerate(stamps):
+            if stamp is None:
+                continue
+            offset = (stamp - base).total_seconds() / (self._slot_minutes * SECONDS_IN_MINUTE)
+            index = round(offset)
+            if FIRST_SLOT_INDEX <= index < self._slots_per_shift:
+                places.setdefault(index, position)
+        return places
+
+    def _slot_start(self, frames: ShiftFrames, index: int) -> datetime:
         """Время начала слота внутри смены."""
-        opening = datetime.combine(plan_entry.plan_date, datetime.min.time())
+        stamps = [item for item in frames.captured_at if item is not None]
+        if stamps:
+            return stamps[0] + timedelta(minutes=self._slot_minutes * index)
+        opening = datetime.combine(frames.plan_entry.plan_date, datetime.min.time())
         start = opening + timedelta(hours=self._shift_start_hour, minutes=self._slot_minutes * index)
         return start
 

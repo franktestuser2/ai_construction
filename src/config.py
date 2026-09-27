@@ -53,6 +53,9 @@ DEFAULT_CAPTURE_TICK_SECONDS = 60
 # Снимок с камеры нужен, пока его не разобрали и не сверили с планом; дальше это
 # занятое место. Сутки — решение пользователя от 27.09.2026.
 DEFAULT_ARCHIVE_HOURS = 24
+# Календарный план объекта, на котором стоят камеры: по нему снятое сегодня
+# связывается с видом работ. Пересобирается scripts/build_site_plan.py.
+DEFAULT_SITE_PLAN_PATH = Path("config/План_объекта.csv")
 
 
 class Settings(BaseSettings):
@@ -108,6 +111,7 @@ class Settings(BaseSettings):
     capture_enabled: bool = True
     capture_tick_seconds: int = DEFAULT_CAPTURE_TICK_SECONDS
     archive_hours: int = DEFAULT_ARCHIVE_HOURS
+    site_plan_path: Path = DEFAULT_SITE_PLAN_PATH
 
     @property
     def slots_per_shift(self) -> int:

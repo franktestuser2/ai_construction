@@ -3,7 +3,7 @@
 import logging
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
-from datetime import date
+from datetime import date, datetime
 
 from pathlib import Path
 
@@ -43,6 +43,20 @@ UNKNOWN_WORK_ID = "не определена"
 MIN_FRAMES_FOR_MOTION = 2
 DEFAULT_PARALLEL_REQUESTS = 8
 MIN_PARALLEL_REQUESTS = 1
+CAPTURED_AT_KEY = "captured_at"
+
+
+def _capture_times(frames_payload: list[dict[str, object]]) -> tuple[datetime | None, ...]:
+    """Достаёт время съёмки каждого кадра, если оно пришло вместе с ним.
+
+    По нему кадр кладётся в свой двадцатиминутный отрезок смены. Без времени кадры
+    раскладываются по порядку — так разбирались загруженные архивы до появления камер.
+    """
+    stamps = []
+    for item in frames_payload:
+        raw = item.get(CAPTURED_AT_KEY)
+        stamps.append(datetime.fromisoformat(str(raw)) if raw else None)
+    return tuple(stamps)
 
 
 class SiteMonitoringFacade:
@@ -179,14 +193,20 @@ class SiteMonitoringFacade:
         # 2. Фасадный этап идёт своим путём.
         frames_payload = payload.get(FRAMES_KEY) or []
         frame_ids = tuple(str(item[FRAME_ID_KEY]) for item in frames_payload)  # type: ignore[union-attr]
+        stamps = _capture_times(frames_payload)  # type: ignore[arg-type]
         if rules.facade_check:
             facade = self._observe_facade(frames_payload, rules.work_id)  # type: ignore[arg-type]
-            return ShiftFrames(plan_entry=plan_entry, frame_ids=frame_ids, facade=facade)
+            return ShiftFrames(
+                plan_entry=plan_entry, frame_ids=frame_ids, facade=facade, captured_at=stamps
+            )
 
         # 3. На прочих этапах снимок разбирается детектором и моделью,
         #    а соседние кадры сравниваются между собой.
         equipment = self._observe_equipment(plan_entry, frame_ids, frames_payload, rules)  # type: ignore[arg-type]
-        return equipment
+        if equipment is None:
+            return None
+        observed = replace(equipment, captured_at=stamps)
+        return observed
 
     def _observe_equipment(
         self,

@@ -2,6 +2,10 @@
 
 Камеры не знают ни о календарном плане, ни о каталогах разбора: они присылают снимки
 по HTTP, а сервис сам решает, когда и с каким планом их разбирать.
+
+Вид работ руками не выбирается. У объекта есть календарный план, и этап определяется
+датой съёмки: сегодня в плане такой-то этап, значит снятое сегодня разбирается по его
+правилам. Именно так задача и поставлена — сверка факта с планом, а не наоборот.
 """
 
 import logging
@@ -13,25 +17,23 @@ from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from ingest_pages import render_ingest
+from site_monitoring.adapters.uploaded_plan_reader import UploadedPlanReader, UploadedStage
 
 logger = logging.getLogger(__name__)
 
 INGEST_URL = "/ingest"
 RUN_URL_TEMPLATE = "/runs/{run_id}"
-PLAN_FILE_NAME = "План_по_снимкам_с_камер.csv"
-PLAN_HEADER = "Вид работ;Дата начала;Дата окончания"
-PLAN_DATE_FORMAT = "%d.%m.%Y"
 IMAGE_SUFFIXES = (".jpg", ".jpeg", ".png")
 REDIRECT_CODE = 303
 EMPTY_QUEUE_MESSAGE = "В очереди нет снимков"
-UNKNOWN_WORK_MESSAGE = "Такого вида работ нет в справочнике"
+NO_PLAN_MESSAGE = "Календарный план объекта не найден"
 ACCEPTED_KEY = "accepted"
 NOTHING = 0
 StartRun = Callable[[bytes, str, list[tuple[str, bytes]]], str]
 
 
-def build_ingest_router(inbox: Path, start_run: StartRun, works: dict[str, str], note: str) -> APIRouter:
-    """Собирает маршруты приёмной вокруг способа запускать разбор."""
+def build_ingest_router(inbox: Path, plan_path: Path, start_run: StartRun, note: str) -> APIRouter:
+    """Собирает маршруты приёмной вокруг плана объекта и способа запускать разбор."""
     router = APIRouter()
 
     @router.post("/ingest/frames")
@@ -53,25 +55,51 @@ def build_ingest_router(inbox: Path, start_run: StartRun, works: dict[str, str],
 
     @router.get(INGEST_URL, response_class=HTMLResponse)
     def ingest_page() -> HTMLResponse:
-        """Страница приёмной: очередь и запуск разбора."""
-        page = render_ingest(_queue(inbox), works, note)
+        """Страница приёмной: очередь, этап плана на сегодня и запуск разбора."""
+        stages = read_plan(plan_path)
+        page = render_ingest(_queue(inbox), stage_for(stages, date.today()), len(stages), note)
         return HTMLResponse(page)
 
     @router.post("/ingest/run")
-    def run_queue(work_id: str = Form(...)) -> RedirectResponse:
-        """Пускает накопленные кадры в разбор с планом на сегодняшний день."""
-        photos = _collect_photos(inbox)
-        if not photos:
+    def run_queue() -> RedirectResponse:
+        """Пускает накопленные кадры в разбор по календарному плану объекта."""
+        run_id = run_pool(inbox, plan_path, start_run)
+        if run_id is None:
             raise HTTPException(status_code=400, detail=EMPTY_QUEUE_MESSAGE)
-        title = works.get(work_id)
-        if title is None:
-            raise HTTPException(status_code=400, detail=UNKNOWN_WORK_MESSAGE)
-        plan = _build_plan(title, date.today())
-        run_id = start_run(plan, PLAN_FILE_NAME, photos)
-        _clear_queue(inbox)
         return RedirectResponse(RUN_URL_TEMPLATE.format(run_id=run_id), status_code=REDIRECT_CODE)
 
     return router
+
+
+def run_pool(inbox: Path, plan_path: Path, start_run: StartRun) -> str | None:
+    """Отдаёт накопленные снимки в разбор вместе с планом объекта.
+
+    Этап каждому снимку выбирает сам разбор — по дате съёмки из метаданных.
+    """
+    photos = _collect_photos(inbox)
+    if not photos:
+        return None
+    if not plan_path.exists():
+        raise FileNotFoundError(NO_PLAN_MESSAGE)
+    run_id = start_run(plan_path.read_bytes(), plan_path.name, photos)
+    _clear_queue(inbox)
+    logger.info("Снимки с камер пущены в разбор: прогон %s, кадров %d", run_id, len(photos))
+    return run_id
+
+
+def read_plan(plan_path: Path) -> tuple[UploadedStage, ...]:
+    """Читает календарный план объекта."""
+    if not plan_path.exists():
+        logger.warning("Календарный план объекта не найден: %s", plan_path)
+        return ()
+    stages = UploadedPlanReader(plan_path).read_stages()
+    return stages
+
+
+def stage_for(stages: tuple[UploadedStage, ...], day: date) -> UploadedStage | None:
+    """Этап плана, который приходится на заданный день."""
+    found = next((stage for stage in stages if stage.start <= day <= stage.finish), None)
+    return found
 
 
 def prune_queue(inbox: Path, keep_after: datetime) -> int:
@@ -129,13 +157,6 @@ def _clear_queue(inbox: Path) -> None:
         for item in directory.iterdir():
             if _is_image(item):
                 item.unlink()
-
-
-def _build_plan(title: str, day: date) -> bytes:
-    """Составляет календарный план на один день под снятое камерами."""
-    stamp = day.strftime(PLAN_DATE_FORMAT)
-    text = f"{PLAN_HEADER}\n{title};{stamp};{stamp}\n"
-    return text.encode("utf-8")
 
 
 def _is_image(path: Path) -> bool:

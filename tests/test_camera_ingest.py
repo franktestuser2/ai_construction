@@ -6,11 +6,9 @@ from pathlib import Path
 
 from camera_watch.adapters.camera_registry_reader import CameraRegistryReader, SafetyChecksReader
 from camera_watch.entity import PERSON_SCOPE
-from ingest_routes import _build_plan, _clear_queue, _collect_photos, _queue
-from site_monitoring.adapters.uploaded_plan_reader import UploadedPlanReader
+from ingest_routes import _clear_queue, _collect_photos, _queue, read_plan, stage_for
 
 PHOTO_BYTES = b"\xff\xd8\xff\xe0 fake jpeg"
-WORK_TITLE = "Погрузка строительного мусора"
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -59,20 +57,28 @@ def test_разобранные_снимки_уходят_из_очереди(tm
     assert (inbox / "gate" / "заметка.txt").exists()
 
 
-def test_план_под_снятое_составляется_на_один_день(tmp_path: Path) -> None:
+def test_этап_на_сегодня_берётся_из_плана_объекта() -> None:
     # Arrange
-    day = date(2026, 9, 27)
-    target = tmp_path / "План.csv"
+    stages = read_plan(PROJECT_ROOT / "config" / "План_объекта.csv")
 
     # Act
-    target.write_bytes(_build_plan(WORK_TITLE, day))
-    stages = UploadedPlanReader(target).read_stages()
+    stage = stage_for(stages, date.today())
 
     # Assert
-    assert len(stages) == 1
-    assert stages[0].full_name == WORK_TITLE
-    assert stages[0].start == day
-    assert stages[0].finish == day
+    assert stages
+    assert stage is not None
+    assert stage.start <= date.today() <= stage.finish
+
+
+def test_на_день_вне_плана_этапа_нет() -> None:
+    # Arrange
+    stages = read_plan(PROJECT_ROOT / "config" / "План_объекта.csv")
+
+    # Act
+    stage = stage_for(stages, date(2020, 1, 1))
+
+    # Assert
+    assert stage is None
 
 
 def test_камеры_читаются_из_конфигурации() -> None:

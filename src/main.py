@@ -24,7 +24,7 @@ from fastapi.staticfiles import StaticFiles
 from camera_routes import build_camera_router
 from camera_watch.container import build_camera_watch
 from config import Settings
-from ingest_routes import build_ingest_router, prune_queue
+from ingest_routes import build_ingest_router, prune_queue, read_plan, run_pool, stage_for
 from site_monitoring.adapters.plan_fact_cache import PlanFactCache
 from site_monitoring.adapters.plan_fact_summarizer import PlanFactSummarizer
 from site_monitoring.adapters.run_storage import STATUS_DONE, RunStorage
@@ -45,6 +45,7 @@ DEMO_DIR = Path("docs/stand")
 DEMO_REPORT_PATH = DEMO_DIR / "index.html"
 DEMO_PHOTOS_DIR = DEMO_DIR / "photos"
 RUNS_PATH = Path("data/runs")
+SHIFT_MARKERS_PATH = Path("data/cameras/shifts")
 TIMELINES_PATH = Path("data/cache/shift_timelines.json")
 SUMMARY_PATH = Path("data/cache/plan_fact_summary.json")
 SAMPLE_PLAN_PATH = Path("data/sample/Календарный_план.xlsx")
@@ -66,13 +67,13 @@ RUN_PHOTO_URL_TEMPLATE = "/runs/{run_id}/photos/"
 RUN_URL_TEMPLATE = "/runs/{run_id}"
 REDIRECT_CODE = 303
 GZIP_MIN_BYTES = 800
-# На рисованных кадрах симулятора детектор техники честно не находит ничего: он обучен
-# на фотографиях. Путь «камера → основной сервис» это не ломает, но предупредить надо.
-SIMULATOR_NOTE = (
-    "Кадры демонстрационных камер нарисованы генератором сцен из репозитория "
-    "video-monitoring. Детектор техники обучен на фотографиях и на рисованной сцене "
-    "находок не даёт — разбор пройдёт, но техники в нём не будет. Проверка охраны "
-    "труда по этим кадрам работает: она сравнивает кадр с текстовыми описаниями."
+# Камеры объекта — публичные трансляции настоящих строек. Обзорная камера ставится
+# высоко, и это влияет на то, что модели способны на ней разглядеть.
+CAMERA_NOTE = (
+    "Камеры объекта — публичные трансляции настоящих строек. Детектор техники на них "
+    "работает: на кадре камеры в Мытищах он находит экскаватор и погрузчики. Людей на "
+    "таких ракурсах разглядеть нельзя — они занимают два десятка пикселей, поэтому "
+    "проверки охраны труда по этим камерам молчат."
 )
 
 settings = Settings()
@@ -95,10 +96,31 @@ def _capture_loop() -> None:
         for camera_id in {item.frame.camera_id for item in outcomes}:
             sent, note = watch.send_to_main_service(camera_id)
             logger.info("Камера %s снята по расписанию: %s", camera_id, note)
+        # Смена кончилась — разбираем накопленное само, не дожидаясь нажатия кнопки.
+        _analyse_finished_shift(datetime.now())
         # Снятое живёт ограниченный срок: без уборки архив растёт без предела.
         keep_after = datetime.now() - timedelta(hours=settings.archive_hours)
         watch.prune_archives(keep_after)
         prune_queue(settings.camera_inbox_path, keep_after)
+
+
+def _analyse_finished_shift(moment: datetime) -> None:
+    """Пускает снятое за день в разбор, когда смена закончилась.
+
+    Раз в день, а не после каждой съёмки: разбор обращается к моделям, и гонять их
+    по девять раз за смену ради одного и того же дня незачем.
+    """
+    if moment.hour < settings.shift_start_hour + settings.shift_hours:
+        return
+    marker = SHIFT_MARKERS_PATH / f"{moment.date().isoformat()}.txt"
+    if marker.exists():
+        return
+    run_id = run_pool(settings.camera_inbox_path, settings.site_plan_path, _start_run_from_frames)
+    if run_id is None:
+        return
+    marker.parent.mkdir(parents=True, exist_ok=True)
+    marker.write_text(run_id, encoding="utf-8")
+    logger.info("Смена %s разобрана по снимкам камер: прогон %s", moment.date(), run_id)
 
 
 @asynccontextmanager
@@ -134,19 +156,11 @@ def _start_run_from_frames(plan: bytes, plan_name: str, photos: list[tuple[str, 
     return state.run_id
 
 
-def _known_work_titles() -> dict[str, str]:
-    """Виды работ, у которых заданы правила по технике."""
-    titles = {
-        work_id: work.full_name.split(" → ")[-1]
-        for work_id, work in dependencies.works_by_id.items()
-        if work_id in dependencies.rules_by_work
-    }
-    return titles
-
-
 app.include_router(build_camera_router(watch, settings.archive_hours))
 app.include_router(
-    build_ingest_router(settings.camera_inbox_path, _start_run_from_frames, _known_work_titles(), SIMULATOR_NOTE)
+    build_ingest_router(
+        settings.camera_inbox_path, settings.site_plan_path, _start_run_from_frames, CAMERA_NOTE
+    )
 )
 
 

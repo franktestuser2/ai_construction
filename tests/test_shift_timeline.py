@@ -491,3 +491,32 @@ def test_техника_из_правил_чужой_не_считается() -
     # Assert
     assert timeline.slots[0].foreign_equipment == ()
     assert timeline.foreign_slots == 0
+
+
+def test_пропуск_круга_съёмки_оставляет_отрезок_пустым(work_rules) -> None:
+    # Arrange: кадры в 09:00, 09:20 и 10:00 — круг в 09:40 камера пропустила.
+    from datetime import datetime as _datetime
+
+    from site_monitoring.services.shift_timeline import ShiftTimelineService
+
+    entry = PlanEntry(project_id="P", work_id=work_rules.work_id, plan_date=date(2026, 9, 28))
+    stamps = (
+        _datetime(2026, 9, 28, 9, 0),
+        _datetime(2026, 9, 28, 9, 20),
+        _datetime(2026, 9, 28, 10, 0),
+    )
+    observations = tuple(
+        FrameObservation(frame_id=f"кадр-{number}", observed_on=entry.plan_date, equipment=())
+        for number in range(len(stamps))
+    )
+    frames = ShiftFrames(
+        plan_entry=entry, frame_ids=tuple(item.frame_id for item in observations),
+        observations=observations, captured_at=stamps,
+    )
+    service = ShiftTimelineService(slot_minutes=20, slots_per_shift=9, shift_start_hour=9)
+
+    # Act
+    timeline = service.build_timeline(work_rules, frames)
+
+    # Assert
+    assert [slot.frame_id for slot in timeline.slots[:4]] == ["кадр-0", "кадр-1", None, "кадр-2"]

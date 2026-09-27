@@ -441,6 +441,9 @@ class ShiftFrames:
     observations: tuple[FrameObservation, ...] = ()
     motions: tuple["MotionObservation | None", ...] = ()
     facade: tuple["FacadeReadiness | None", ...] = ()
+    # Время съёмки каждого кадра: по нему кадр кладётся в свой отрезок смены.
+    # Пусто — значит времени нет, и кадры раскладываются по порядку.
+    captured_at: tuple[datetime | None, ...] = ()
 
     @property
     def is_facade(self) -> bool:
