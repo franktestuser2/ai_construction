@@ -11,23 +11,32 @@ from site_monitoring.adapters.run_storage import STATUS_DONE, STATUS_FAILED, Run
 from site_monitoring.entity import StageStatus
 from site_monitoring.services.plan_fact import PlanFact
 
-PAGE_TABS = (
-    ("/dashboard", "Дашборд руководителя"),
-    ("/demo#shifts", "Смены по слотам"),
-    ("/demo#frames", "Просмотр снимков"),
-    ("/cameras", "Камеры"),
-    ("/safety", "Охрана труда"),
-    ("/ingest", "Снимки с камер"),
-    ("/demo#about", "Что мы строим"),
-    ("/", "Загрузка данных"),
+# Навигация одна на все страницы, включая собираемый стенд: пока наборы корешков
+# у страниц расходились, переход уводил часть из них из виду. Третье поле непустое
+# у тех страниц, которые на стенде являются не отдельным адресом, а его вкладкой.
+MAIN_SERVICE_LABEL = "Основной сервис"
+EXTRA_SERVICE_LABEL = "Дополнительный · видеонаблюдение"
+MAIN_TABS = (
+    ("/", "Загрузка данных", ""),
+    ("/dashboard", "Дашборд руководителя", "dashboard"),
+    ("/demo#shifts", "Смены по слотам", "shifts"),
+    ("/demo#frames", "Просмотр снимков", "frames"),
+    ("/demo#about", "Что мы строим", "about"),
+)
+EXTRA_TABS = (
+    ("/cameras", "Камеры онлайн", ""),
+    ("/safety", "Охрана труда", ""),
+    ("/ingest", "Снимки с камер", ""),
 )
 
 STYLE = """
 :root{--bg:#f4f5f7;--panel:#fff;--ink:#15181d;--muted:#5d6672;--line:#dfe3e8;
-      --ok:#1f8a4c;--ok-bg:#e7f5ec;--bad:#c0392b;--bad-bg:#fbeceb;--accent:#1f6fd0}
+      --ok:#1f8a4c;--ok-bg:#e7f5ec;--bad:#c0392b;--bad-bg:#fbeceb;--accent:#1f6fd0;
+      --extra:#7a4bbd}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#14171c;--panel:#1c2026;--ink:#eceff3;--muted:#9aa4b2;--line:#2c323b;
-  --ok:#4ade80;--ok-bg:#16301f;--bad:#f87171;--bad-bg:#3a1c1a;--accent:#7ba4ff}}
+  --ok:#4ade80;--ok-bg:#16301f;--bad:#f87171;--bad-bg:#3a1c1a;--accent:#7ba4ff;
+  --extra:#b79be8}}
 *,*::before,*::after{box-sizing:border-box}
 body{margin:0;padding:28px 16px;background:var(--bg);color:var(--ink);
      font:15px/1.55 -apple-system,"Segoe UI",Roboto,sans-serif}
@@ -65,11 +74,16 @@ th{color:var(--muted);font-weight:600;font-size:12px}
 .share i{display:block;height:100%;background:var(--accent)}
 header{max-width:1120px;margin:0 auto 20px}
 header .brand{font-size:13px;color:var(--muted);letter-spacing:.02em;margin-bottom:10px}
-nav{display:flex;gap:2px;flex-wrap:wrap;border-bottom:1px solid var(--line)}
+nav{display:flex;gap:2px;flex-wrap:wrap;align-items:center;border-bottom:1px solid var(--line)}
+nav.extra{border-bottom:none;margin-top:2px}
+nav .railname{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+              color:var(--muted);padding:0 12px 0 0;white-space:nowrap}
+nav.extra .railname{color:var(--extra)}
 nav a{padding:9px 14px;font-size:14px;color:var(--muted);text-decoration:none;
       border-bottom:2px solid transparent;white-space:nowrap}
 nav a:hover{color:var(--ink)}
 nav a.here{color:var(--ink);font-weight:600;border-bottom-color:var(--accent)}
+nav.extra a.here{border-bottom-color:var(--extra)}
 form .field{margin-bottom:18px}
 form .field:last-of-type{margin-bottom:8px}
 .drop{border:1px dashed var(--line);border-radius:10px;background:var(--bg);
@@ -87,29 +101,70 @@ button.primary{width:100%;padding:13px;font-size:15px}
 .done a:hover{border-color:var(--accent)}
 .done b{display:block;font-size:14px}
 .done span{color:var(--muted);font-size:12px}
+.svc{display:inline-block;vertical-align:middle;margin-left:10px;padding:3px 10px;border-radius:999px;
+     font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;
+     background:var(--bg);color:var(--muted);border:1px solid var(--line)}
+.svc.extra{color:var(--extra);border-color:var(--extra)}
 """
 
 HEADER_TEMPLATE = """<header>
   <div class="brand">Контроль строительных площадок · ЛЦТ-2026, задача №7</div>
-  <nav>{tabs}</nav>
+  <nav><span class="railname">{main_label}</span>{main_tabs}</nav>
+  <nav class="extra"><span class="railname">{extra_label}</span>{extra_tabs}</nav>
 </header>"""
 
 
 def render_header(current: str) -> str:
-    """Собирает шапку с корешками страниц, подсвечивая текущую."""
-    tabs = "".join(
-        f'<a href="{href}" class="{"here" if href == current else ""}">{escape(title)}</a>'
-        for href, title in PAGE_TABS
+    """Собирает шапку с корешками обоих сервисов, подсвечивая текущую страницу."""
+    header = HEADER_TEMPLATE.format(
+        main_label=MAIN_SERVICE_LABEL,
+        extra_label=EXTRA_SERVICE_LABEL,
+        main_tabs=_render_links(MAIN_TABS, current),
+        extra_tabs=_render_links(EXTRA_TABS, current),
     )
-    header = HEADER_TEMPLATE.format(tabs=tabs)
     return header
+
+
+def _render_links(tabs: tuple[tuple[str, str, str], ...], current: str) -> str:
+    """Корешки одного ряда обычными ссылками."""
+    links = "".join(
+        f'<a href="{href}" class="{"here" if href == current else ""}">{escape(title)}</a>'
+        for href, title, _ in tabs
+    )
+    return links
+
+
+def render_stand_nav() -> str:
+    """Те же корешки для собираемой страницы стенда.
+
+    Страницы, которые на стенде являются его вкладками, остаются кнопками — иначе
+    переход между ними перезагружал бы страницу ради того, что уже загружено.
+    """
+    header = HEADER_TEMPLATE.format(
+        main_label=MAIN_SERVICE_LABEL,
+        extra_label=EXTRA_SERVICE_LABEL,
+        main_tabs=_render_stand_links(MAIN_TABS),
+        extra_tabs=_render_stand_links(EXTRA_TABS),
+    )
+    return header
+
+
+def _render_stand_links(tabs: tuple[tuple[str, str, str], ...]) -> str:
+    """Корешки ряда для стенда: свои вкладки кнопками, чужие страницы ссылками."""
+    parts = []
+    for href, title, view in tabs:
+        if view:
+            parts.append(f'<button class="tab" role="tab" data-view="{view}">{escape(title)}</button>')
+        else:
+            parts.append(f'<a class="tablink" href="{href}">{escape(title)}</a>')
+    return "".join(parts)
 
 INDEX_TEMPLATE = """<!DOCTYPE html>
 <html lang="ru"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Контроль стройплощадок</title><style>{style}</style></head>
 <body>{header}<div class="wrap">
-<h1>Загрузка данных</h1>
+<h1>Загрузка данных<span class="svc">основной сервис</span></h1>
 <p class="sub">Приложите календарный план и снимки с камер — сервис разнесёт снимки
 по этапам, определит технику, её работу и готовность фасада, а затем ответит,
 идёт ли стройка по графику.</p>
@@ -159,7 +214,7 @@ RUN_TEMPLATE = """<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Прогон {run_id}</title><style>{style}</style></head>
 <body>{header}<div class="wrap">
-<h1>Прогон {run_id}</h1>
+<h1>Прогон {run_id}<span class="svc">основной сервис</span></h1>
 <p class="sub">Загружен {created_at}. План: {plan_file}, снимков: {photo_count}.</p>
 
 <div class="panel">
@@ -287,7 +342,7 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ход работ по графику</title><style>{style}{chart_style}</style></head>
 <body>{header}<div class="wrap">
-<h1>Идём ли мы по графику</h1>
+<h1>Идём ли мы по графику<span class="svc">основной сервис</span></h1>
 <p class="sub">План — объём смен по календарному графику в отрезках по {slot_minutes} минут.
 Факт — отрезки, по которым подтверждена работа.</p>
 

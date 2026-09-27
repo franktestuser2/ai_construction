@@ -10,7 +10,7 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Приёмная камер</title><style>{style}</style></head>
 <body>{header}<div class="wrap">
-<h1>Снимки с камер</h1>
+<h1>Снимки с камер<span class="svc extra">дополнительный сервис</span></h1>
 <p class="sub">Сюда камеры складывают кадры, снятые по расписанию. Разбор запускается
 по ним так же, как по загруженному архиву: сервис сверяет дату съёмки с датами плана.</p>
 {body}

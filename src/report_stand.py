@@ -20,12 +20,14 @@ from PIL import Image
 from config import Settings
 from site_monitoring.adapters.shift_timeline_reader import ShiftTimelineReader
 from site_monitoring.services.plan_fact_report import build_report
+from web_pages import render_stand_nav
 
 logger = logging.getLogger(__name__)
 
 TEMPLATE_PATH = Path("templates/demo_stand.html")
 RULES_PATH = Path("config/equipment_rules_v3.json")
 DATA_PLACEHOLDER = "__DATA__"
+NAV_PLACEHOLDER = "__NAV__"
 PHOTOS_SUBDIR = "photos"
 INDEX_NAME = "index.html"
 PREVIEW_WIDTH = 1000
@@ -148,6 +150,9 @@ class StandBuilder:
         template = TEMPLATE_PATH.read_text(encoding="utf-8")
         serialized = json.dumps(payload, ensure_ascii=False, default=str).replace("</", "<\\/")
         page = template.replace(DATA_PLACEHOLDER, serialized)
+        # Навигация общая со страницами сервиса: у стенда свой набор корешков
+        # уводил половину страниц из виду при первом же переходе.
+        page = page.replace(NAV_PLACEHOLDER, render_stand_nav())
         return page
 
     def _save_photo(self, path: Path, name: str) -> str:

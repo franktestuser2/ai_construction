@@ -32,6 +32,20 @@ header{padding:18px 16px 0;max-width:1400px;margin:0 auto}
 h1{font-size:20px;margin:0 0 2px}
 .sub{color:var(--muted);font-size:13px;margin-bottom:14px}
 .tabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--line)}
+header .brand{font-size:13px;color:var(--muted);letter-spacing:.02em;margin-bottom:10px}
+nav{display:flex;gap:2px;flex-wrap:wrap;align-items:center;border-bottom:1px solid var(--line)}
+nav.extra{border-bottom:none;margin-top:2px;margin-bottom:18px}
+nav .railname{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+              color:var(--muted);padding:0 12px 0 0;white-space:nowrap}
+nav.extra .railname{color:var(--extra)}
+nav a.tablink{padding:9px 14px;font-size:14px;color:var(--muted);text-decoration:none;
+              border-bottom:2px solid transparent;white-space:nowrap}
+nav a.tablink:hover{color:var(--ink)}
+nav.extra button.tab[aria-selected="true"]{border-bottom-color:var(--extra)}
+.svc{display:inline-block;vertical-align:middle;margin-left:10px;padding:3px 10px;border-radius:999px;
+     font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;
+     background:var(--bg);color:var(--muted);border:1px solid var(--line)}
+.svc.extra{color:var(--extra);border-color:var(--extra)}
 .tab{padding:9px 14px;border:none;background:none;color:var(--muted);font:inherit;font-size:14px;
   cursor:pointer;border-bottom:2px solid transparent;border-radius:6px 6px 0 0}
 .tablink{text-decoration:none;display:inline-block;border-bottom:2px solid transparent}
@@ -153,16 +167,10 @@ h3{font-size:14px;margin:16px 0 6px}
 </style>
 </head>
 <body>
+__NAV__
 <header>
-  <h1>Контроль строительной площадки по снимкам</h1>
+  <h1>Контроль строительной площадки по снимкам<span class="svc">основной сервис</span></h1>
   <div class="sub" id="subtitle"></div>
-  <div class="tabs" role="tablist">
-    <button class="tab" role="tab" data-view="dashboard" aria-selected="true">Дашборд руководителя</button>
-    <button class="tab" role="tab" data-view="shifts" aria-selected="false">Смены по слотам</button>
-    <button class="tab" role="tab" data-view="frames" aria-selected="false">Просмотр снимков</button>
-    <button class="tab" role="tab" data-view="about" aria-selected="false">Что мы строим</button>
-    <a class="tab tablink" href="/">Загрузка данных</a>
-  </div>
 </header>
 <main>
   <section class="view active" id="view-dashboard">
@@ -542,9 +550,21 @@ function openSlot(button){
 
 function renderAbout(){ document.getElementById('about').innerHTML = DATA.about; }
 
+const VIEWS = ['dashboard', 'shifts', 'frames', 'about'];
+
 function switchView(name){
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + name));
   document.querySelectorAll('button.tab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.view === name)));
+  history.replaceState(null, '', '#' + name);
+}
+
+// Вкладка берётся из адреса: на неё ведут ссылки с других страниц сервиса,
+// и без этого переход «Смены по слотам» открывал бы дашборд.
+function viewFromHash(){
+  const name = location.hash.replace('#', '');
+  // Вкладки снимков может не быть вовсе: у прогона кадры лежат отдельными файлами.
+  if(name === 'frames' && !frames.length){ return VIEWS[0]; }
+  return VIEWS.includes(name) ? name : VIEWS[0];
 }
 
 document.querySelectorAll('button.tab').forEach(t => t.addEventListener('click', () => switchView(t.dataset.view)));
@@ -563,6 +583,8 @@ if(!frames.length){
 }
 document.getElementById('sh-viewer').classList.add('empty');
 renderDashboard(); renderAbout(); renderShifts(); show(0);
+switchView(viewFromHash());
+window.addEventListener('hashchange', () => switchView(viewFromHash()));
 </script>
 </body>
 </html>

@@ -52,7 +52,7 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{title}</title><style>{style}{page_style}</style></head>
 <body>{header}<div class="wrap">
-<h1>{heading}</h1>
+<h1>{heading}<span class="svc extra">дополнительный сервис</span></h1>
 <p class="sub">{lead}</p>
 {body}
 </div></body></html>"""
