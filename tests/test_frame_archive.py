@@ -106,3 +106,55 @@ def test_снимок_читается_как_изображение(tmp_path: P
 
     # Assert
     assert size == (80, 60)
+
+
+def test_кадры_старше_срока_хранения_убираются(tmp_path: Path) -> None:
+    # Arrange
+    archive = FrameArchive(tmp_path)
+    old_at = datetime(2026, 9, 26, 9, 0)
+    fresh_at = datetime(2026, 9, 27, 9, 0)
+    old_name = archive.save_photo(CAMERA_ID, _frame(), old_at, NOTE)
+    fresh_name = archive.save_photo(CAMERA_ID, _frame(), fresh_at, NOTE)
+    archive.append(CapturedFrame(CAMERA_ID, old_at, old_name, source_second=0.0))
+    archive.append(CapturedFrame(CAMERA_ID, fresh_at, fresh_name, source_second=0.0))
+
+    # Act
+    removed = archive.prune(CAMERA_ID, datetime(2026, 9, 27, 0, 0))
+
+    # Assert
+    assert removed == 1
+    assert [frame.file_name for frame in archive.list_frames(CAMERA_ID)] == [fresh_name]
+    assert not archive.photo_path(CAMERA_ID, old_name).exists()
+    assert archive.photo_path(CAMERA_ID, fresh_name).exists()
+
+
+def test_вместе_с_кадром_уходит_его_отрезок_записи(tmp_path: Path) -> None:
+    # Arrange
+    archive = FrameArchive(tmp_path)
+    old_at = datetime(2026, 9, 26, 9, 0)
+    name = archive.save_photo(CAMERA_ID, _frame(), old_at, NOTE)
+    clip = archive.clip_path(CAMERA_ID, "gate-clip.mp4")
+    clip.parent.mkdir(parents=True, exist_ok=True)
+    clip.write_bytes(b"clip")
+    frame = CapturedFrame(CAMERA_ID, old_at, name, source_second=0.0, clip_name=clip.name)
+    archive.append(frame)
+
+    # Act
+    archive.prune(CAMERA_ID, datetime(2026, 9, 27, 0, 0))
+
+    # Assert
+    assert not clip.exists()
+
+
+def test_свежие_кадры_уборка_не_трогает(tmp_path: Path) -> None:
+    # Arrange
+    archive = FrameArchive(tmp_path)
+    name = archive.save_photo(CAMERA_ID, _frame(), CAPTURED_AT, NOTE)
+    archive.append(CapturedFrame(CAMERA_ID, CAPTURED_AT, name, source_second=0.0))
+
+    # Act
+    removed = archive.prune(CAMERA_ID, CAPTURED_AT)
+
+    # Assert
+    assert removed == 0
+    assert len(archive.list_frames(CAMERA_ID)) == 1

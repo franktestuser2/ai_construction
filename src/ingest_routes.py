@@ -6,7 +6,7 @@
 
 import logging
 from collections.abc import Callable
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
@@ -72,6 +72,27 @@ def build_ingest_router(inbox: Path, start_run: StartRun, works: dict[str, str],
         return RedirectResponse(RUN_URL_TEMPLATE.format(run_id=run_id), status_code=REDIRECT_CODE)
 
     return router
+
+
+def prune_queue(inbox: Path, keep_after: datetime) -> int:
+    """Убирает из очереди снимки старше срока хранения.
+
+    Очередь чистится тем же сроком, что и архив: если разбор так и не запустили,
+    вчерашние кадры сверять уже не с чем — смена кончилась.
+    """
+    if not inbox.exists():
+        return NOTHING
+    removed = NOTHING
+    for directory in inbox.iterdir():
+        if not directory.is_dir():
+            continue
+        for item in directory.iterdir():
+            if _is_image(item) and datetime.fromtimestamp(item.stat().st_mtime) < keep_after:
+                item.unlink()
+                removed += 1
+    if removed:
+        logger.info("Очередь приёмной: убрано снимков старше срока хранения: %d", removed)
+    return removed
 
 
 def _queue(inbox: Path) -> dict[str, int]:

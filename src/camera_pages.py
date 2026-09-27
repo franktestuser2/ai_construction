@@ -70,19 +70,23 @@ def render_cameras(states: tuple[CameraState, ...]) -> str:
         page_style=PAGE_STYLE,
         header=render_header(CAMERAS_URL),
         heading="Камеры площадки",
-        lead="Каждая камера снимает кадр по расписанию, хранит его и отдаёт основному сервису — "
-        "оттуда берутся снимки для сверки с календарным планом. По клику открывается живой "
-        "просмотр и весь архив съёмки.",
+        lead="Каждая камера снимает кадр по расписанию, хранит его сутки и сразу отдаёт "
+        "основному сервису — оттуда берутся снимки для сверки с календарным планом. "
+        "По клику открывается живой просмотр и весь архив съёмки.",
         body=body,
     )
     return page
 
 
 def render_camera(
-    camera: Camera, frames: tuple[CapturedFrame, ...], next_at: datetime, size: tuple[int, int]
+    camera: Camera,
+    frames: tuple[CapturedFrame, ...],
+    next_at: datetime,
+    size: tuple[int, int],
+    keep_hours: int,
 ) -> str:
     """Страница одной камеры: живой просмотр и архив снятого."""
-    body = _live_panel(camera, next_at) + _archive_panel(camera, frames, size)
+    body = _live_panel(camera, next_at) + _archive_panel(camera, frames, size, keep_hours)
     page = PAGE_TEMPLATE.format(
         title=escape(camera.title),
         style=STYLE,
@@ -192,14 +196,18 @@ def _live_panel(camera: Camera, next_at: datetime) -> str:
     return panel
 
 
-def _archive_panel(camera: Camera, frames: tuple[CapturedFrame, ...], size: tuple[int, int]) -> str:
+def _archive_panel(
+    camera: Camera, frames: tuple[CapturedFrame, ...], size: tuple[int, int], keep_hours: int
+) -> str:
     """Архив снятых кадров камеры."""
     if not frames:
         return '<div class="panel"><h2>Архив съёмки</h2><p class="note">Кадров пока нет.</p></div>'
     rows = "".join(_archive_row(camera, frame, size) for frame in frames)
-    panel = f"""<div class="panel"><h2>Архив съёмки</h2>
+    panel = f"""<div class="panel"><h2>Архив съёмки · {len(frames)} кадров</h2>
 <p class="note">Снимки хранятся с датой съёмки в метаданных: основной сервис разносит их
-по этапам плана именно по ней. К отметке охраны труда пишется отрезок записи.</p>
+по этапам плана именно по ней. К отметке охраны труда пишется отрезок записи.
+Срок хранения — <b>{keep_hours} ч</b>: кадр нужен, пока его не разобрали и не сверили
+с планом, дальше он только занимает место.</p>
 {rows}</div>"""
     return panel
 

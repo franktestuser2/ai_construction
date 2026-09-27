@@ -145,3 +145,23 @@ def test_проверки_охраны_труда_читаются_с_обоим
     assert all(check.strict_threshold > check.threshold for check in checks)
     assert all(check.scope == PERSON_SCOPE for check in checks)
     assert all(check.measured_on for check in checks)
+
+
+def test_очередь_чистится_по_сроку_хранения(tmp_path: Path) -> None:
+    # Arrange
+    import os
+    from datetime import datetime, timedelta
+
+    from ingest_routes import prune_queue
+
+    inbox = _inbox(tmp_path)
+    stale = inbox / "gate" / "gate-1.jpg"
+    old_stamp = (datetime.now() - timedelta(hours=30)).timestamp()
+    os.utime(stale, (old_stamp, old_stamp))
+
+    # Act
+    removed = prune_queue(inbox, datetime.now() - timedelta(hours=24))
+
+    # Assert
+    assert removed == 1
+    assert _queue(inbox) == {"gate": 1}

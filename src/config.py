@@ -50,6 +50,9 @@ DEFAULT_MAIN_SERVICE_URL = "http://127.0.0.1:8090"
 DEFAULT_ONNX_THREADS = 2
 # Часовой ход съёмки: планировщик просыпается чаще периода, чтобы не проспать границу слота.
 DEFAULT_CAPTURE_TICK_SECONDS = 60
+# Снимок с камеры нужен, пока его не разобрали и не сверили с планом; дальше это
+# занятое место. Сутки — решение пользователя от 27.09.2026.
+DEFAULT_ARCHIVE_HOURS = 24
 
 
 class Settings(BaseSettings):
@@ -104,6 +107,7 @@ class Settings(BaseSettings):
     onnx_threads: int = DEFAULT_ONNX_THREADS
     capture_enabled: bool = True
     capture_tick_seconds: int = DEFAULT_CAPTURE_TICK_SECONDS
+    archive_hours: int = DEFAULT_ARCHIVE_HOURS
 
     @property
     def slots_per_shift(self) -> int:

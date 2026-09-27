@@ -34,7 +34,7 @@ NO_FRAME_MESSAGE = "Камера не отдала кадр"
 EVENTS_LIMIT = 60
 
 
-def build_camera_router(watch: CameraWatchFacade) -> APIRouter:
+def build_camera_router(watch: CameraWatchFacade, keep_hours: int) -> APIRouter:
     """Собирает маршруты контура наблюдения вокруг его фасада."""
     router = APIRouter()
 
@@ -53,7 +53,11 @@ def build_camera_router(watch: CameraWatchFacade) -> APIRouter:
             raise HTTPException(status_code=404, detail=NO_CAMERA_MESSAGE)
         moment = datetime.now()
         page = render_camera(
-            camera, watch.frames(camera_id), watch.next_capture(camera, moment), _size(watch, camera_id)
+            camera,
+            watch.frames(camera_id),
+            watch.next_capture(camera, moment),
+            _size(watch, camera_id),
+            keep_hours,
         )
         return HTMLResponse(page)
 

@@ -111,6 +111,35 @@ class FrameArchive:
         self._write_index(camera_id, records)
         return touched
 
+    def prune(self, camera_id: str, keep_after: datetime) -> int:
+        """Убирает кадры старше заданного времени и возвращает, сколько их было.
+
+        Снимок с камеры нужен ровно до тех пор, пока его не разобрали и не сверили
+        с планом; дальше это просто занятое место. Вместе со снимком уходит и отрезок
+        записи, снятый к нему: доказательство без кадра бессмысленно.
+        """
+        records = self._read_index(camera_id)
+        kept: list[dict[str, object]] = []
+        removed = NOTHING
+        for record in records:
+            stamp = datetime.strptime(str(record["captured_at"]), TIME_FORMAT)
+            if stamp >= keep_after:
+                kept.append(record)
+                continue
+            self._remove_files(camera_id, record)
+            removed += 1
+        if removed:
+            self._write_index(camera_id, kept)
+            logger.info("Камера %s: убрано кадров старше срока хранения: %d", camera_id, removed)
+        return removed
+
+    def _remove_files(self, camera_id: str, record: dict[str, object]) -> None:
+        """Удаляет файлы одного кадра: сам снимок и отрезок записи к нему."""
+        self.photo_path(camera_id, str(record["file_name"])).unlink(missing_ok=True)
+        clip_name = str(record.get("clip_name") or "")
+        if clip_name:
+            self.clip_path(camera_id, clip_name).unlink(missing_ok=True)
+
     def used_bytes(self, camera_id: str) -> int:
         """Сколько места занимает архив камеры."""
         directory = self._root / camera_id

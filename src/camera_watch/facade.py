@@ -151,6 +151,11 @@ class CameraWatchFacade:
                 outcomes.append(outcome)
         return outcomes
 
+    def prune_archives(self, keep_after: datetime) -> int:
+        """Убирает по всем камерам кадры старше срока хранения."""
+        removed = sum(self._archive.prune(camera.camera_id, keep_after) for camera in self.cameras())
+        return removed
+
     def next_capture(self, camera: Camera, moment: datetime) -> datetime:
         """Когда камера снимет следующий кадр."""
         frames = self._archive.list_frames(camera.camera_id)

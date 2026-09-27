@@ -12,7 +12,7 @@ import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import asdict
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -24,7 +24,7 @@ from fastapi.staticfiles import StaticFiles
 from camera_routes import build_camera_router
 from camera_watch.container import build_camera_watch
 from config import Settings
-from ingest_routes import build_ingest_router
+from ingest_routes import build_ingest_router, prune_queue
 from site_monitoring.adapters.plan_fact_cache import PlanFactCache
 from site_monitoring.adapters.plan_fact_summarizer import PlanFactSummarizer
 from site_monitoring.adapters.run_storage import STATUS_DONE, RunStorage
@@ -95,6 +95,10 @@ def _capture_loop() -> None:
         for camera_id in {item.frame.camera_id for item in outcomes}:
             sent, note = watch.send_to_main_service(camera_id)
             logger.info("Камера %s снята по расписанию: %s", camera_id, note)
+        # Снятое живёт ограниченный срок: без уборки архив растёт без предела.
+        keep_after = datetime.now() - timedelta(hours=settings.archive_hours)
+        watch.prune_archives(keep_after)
+        prune_queue(settings.camera_inbox_path, keep_after)
 
 
 @asynccontextmanager
@@ -140,7 +144,7 @@ def _known_work_titles() -> dict[str, str]:
     return titles
 
 
-app.include_router(build_camera_router(watch))
+app.include_router(build_camera_router(watch, settings.archive_hours))
 app.include_router(
     build_ingest_router(settings.camera_inbox_path, _start_run_from_frames, _known_work_titles(), SIMULATOR_NOTE)
 )
