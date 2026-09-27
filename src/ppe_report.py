@@ -27,9 +27,12 @@ PHOTO_SUFFIXES = (".jpg", ".jpeg", ".png")
 VIDEO_SUFFIXES = (".mp4", ".mov", ".avi", ".mkv")
 # Крупные кадры не сжимаются: детектор разберёт их по частям, и мелкие фигуры уцелеют.
 MAX_SIDE = 2600
-PREVIEW_WIDTH = 720
-PREVIEW_QUALITY = 78
+PREVIEW_WIDTH = 640
+PREVIEW_QUALITY = 74
 FRAMES_DIR_NAME = "frames"
+# Страница отдаётся сервисом по своему адресу, поэтому ссылки на кадры абсолютные:
+# относительные уходили бы на уровень выше и давали пустые рамки без картинок.
+FRAMES_URL = "/safety/ppe/frames"
 PAGE_NAME = "index.html"
 SAFETY_URL = "/safety"
 NOTHING = 0
@@ -227,8 +230,8 @@ def _card(result: FrameResult) -> str:
     """Карточка одного кадра."""
     boxes = "".join(_box(item, result) for item in result.findings if item.box)
     card = f"""<div class="card">
-  <a class="pic" href="{FRAMES_DIR_NAME}/{result.preview}">
-    <img src="{FRAMES_DIR_NAME}/{result.preview}" loading="lazy"
+  <a class="pic" href="{FRAMES_URL}/{result.preview}">
+    <img src="{FRAMES_URL}/{result.preview}" loading="lazy" decoding="async"
          alt="{escape(result.title)}">{boxes}</a>
   <div class="body"><h3>{escape(result.title)}</h3>{_findings(result)}</div>
 </div>"""
