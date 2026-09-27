@@ -8,6 +8,7 @@
 import logging
 from collections.abc import Iterator
 from datetime import datetime
+from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response, StreamingResponse
@@ -33,6 +34,9 @@ NO_PHOTO_MESSAGE = "Снимок не найден"
 NO_CLIP_MESSAGE = "Отрезок записи не найден"
 NO_FRAME_MESSAGE = "Камера не отдала кадр"
 EVENTS_LIMIT = 60
+PPE_DIR = Path("docs/ppe")
+PPE_PAGE = PPE_DIR / "index.html"
+NO_PPE_MESSAGE = "Разбор СИЗ не собран: запустите scripts/check_ppe.py"
 
 
 def build_camera_router(watch: CameraWatchFacade, keep_hours: int) -> APIRouter:
@@ -117,6 +121,21 @@ def build_camera_router(watch: CameraWatchFacade, keep_hours: int) -> APIRouter:
         target = watch.clip_path(camera_id, name)
         if not target.exists():
             raise HTTPException(status_code=404, detail=NO_CLIP_MESSAGE)
+        return FileResponse(target)
+
+    @router.get("/safety/ppe", response_class=HTMLResponse)
+    def safety_ppe() -> FileResponse:
+        """Разбор касок и жилетов по присланным фотографиям и роликам."""
+        if not PPE_PAGE.exists():
+            raise HTTPException(status_code=404, detail=NO_PPE_MESSAGE)
+        return FileResponse(PPE_PAGE)
+
+    @router.get("/safety/ppe/frames/{name}")
+    def safety_ppe_frame(name: str) -> FileResponse:
+        """Кадр разбора СИЗ; имя берётся без пути."""
+        target = PPE_DIR / "frames" / Path(name).name
+        if not target.exists():
+            raise HTTPException(status_code=404, detail=NO_PHOTO_MESSAGE)
         return FileResponse(target)
 
     @router.get("/safety", response_class=HTMLResponse)

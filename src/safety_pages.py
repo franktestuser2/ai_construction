@@ -24,13 +24,9 @@ def render_safety(
     """Лента охраны труда: отметки моделей с кадром-доказательством."""
     if events:
         rows = "".join(_event_row(camera, frame, finding, sizes) for camera, frame, finding in events)
-        body = f'<div class="panel">{rows}</div>{_checks_panel(checks)}'
+        body = _ppe_panel() + f'<div class="panel">{rows}</div>' + _checks_panel(checks)
     else:
-        body = (
-            '<div class="panel"><p class="note">Отметок пока нет. Снимите кадр на странице '
-            f'<a href="{CAMERAS_URL}">камер</a> или дождитесь съёмки по расписанию.</p></div>'
-            + _checks_panel(checks)
-        )
+        body = _ppe_panel() + _no_events_panel() + _checks_panel(checks)
     page = PAGE_TEMPLATE.format(
         title="Охрана труда",
         style=STYLE,
@@ -43,6 +39,31 @@ def render_safety(
         body=body,
     )
     return page
+
+
+def _ppe_panel() -> str:
+    """Где проверка СИЗ работает и где смотреть её разбор."""
+    panel = """<div class="panel"><h2>Каски и жилеты: на чём это работает</h2>
+<p class="note">Проверка судит о человеке ростом не ниже 80 пикселей в кадре. На обзорных
+камерах объекта столько не бывает — человек занимает там два десятка пикселей, поэтому
+проверка на них выключена, и лента ниже пуста намеренно.</p>
+<p class="note">Тот же разбор на подходящем материале — крупные планы стройки,
+фотографии и ролики — показан отдельно: <a href="/safety/ppe">каски и жилеты на фото и
+видео</a>. Вход один и тот же, разницы между снимком и кадром из ролика в разборе нет.</p>
+<p class="note">Поэтому проверку СИЗ можно встроить в наблюдение за площадкой там, где
+камера стоит близко к людям: на проходной, у бытовок, на входе в зону работ. Календарного
+плана ей не нужно — каска не зависит от того, какой сегодня этап.</p></div>"""
+    return panel
+
+
+def _no_events_panel() -> str:
+    """Сообщение, когда отметок по камерам нет."""
+    panel = (
+        '<div class="panel"><h2>Отметок по камерам нет</h2><p class="note">Проверка на '
+        f'<a href="{CAMERAS_URL}">камерах объекта</a> выключена: они обзорные. Включается '
+        "флагом в описании камеры, когда появится камера, стоящая ближе к людям.</p></div>"
+    )
+    return panel
 
 
 def _event_row(

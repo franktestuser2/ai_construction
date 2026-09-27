@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Проверка СИЗ</title><style>
+:root{--bg:#f4f5f7;--panel:#fff;--ink:#15181d;--muted:#5d6672;--line:#dfe3e8;
+      --ok:#1f8a4c;--ok-bg:#e7f5ec;--bad:#c0392b;--bad-bg:#fbeceb;--accent:#1f6fd0;
+      --extra:#6b3fb0;--extra-bg:#f4eefc;--extra-line:#dcc9f4;
+      --cam:#6b3fb0;--cam-bg:#f1e8fb;--saf:#b3261e;--saf-bg:#fbeae8;
+      --ing:#0d6f7d;--ing-bg:#e1f2f5}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#14171c;--panel:#1c2026;--ink:#eceff3;--muted:#9aa4b2;--line:#2c323b;
+  --ok:#4ade80;--ok-bg:#16301f;--bad:#f87171;--bad-bg:#3a1c1a;--accent:#7ba4ff;
+  --extra:#c0a6f0;--extra-bg:#251d33;--extra-line:#3c2f52;
+  --cam:#c0a6f0;--cam-bg:#251d33;--saf:#f19790;--saf-bg:#331d1b;
+  --ing:#6fc9d6;--ing-bg:#122b30}}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;padding:28px 16px;background:var(--bg);color:var(--ink);
+     font:15px/1.55 -apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:1120px;margin:0 auto}
+h1{font-size:23px;margin:0 0 4px}
+h2{font-size:17px;margin:0 0 10px}
+.sub{color:var(--muted);margin:0 0 22px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+       padding:18px;margin-bottom:16px}
+label{display:block;margin:12px 0 4px;font-weight:600;font-size:14px}
+input[type=file]{width:100%;font:inherit;padding:8px;border:1px dashed var(--line);
+                 border-radius:8px;background:var(--bg)}
+button{font:inherit;font-weight:600;padding:10px 18px;border-radius:9px;border:none;
+       background:var(--accent);color:#fff;cursor:pointer;margin-top:14px}
+a.btn{display:inline-block;text-decoration:none}
+.note{color:var(--muted);font-size:13px}
+table{width:100%;border-collapse:collapse;font-size:14px;margin-top:8px}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line)}
+th{color:var(--muted);font-weight:600;font-size:12px}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:600}
+.ok{background:var(--ok-bg);color:var(--ok)}
+.bad{background:var(--bad-bg);color:var(--bad)}
+.warn{background:#fdf1de;color:#b26a00}
+.bar{height:10px;border-radius:5px;background:var(--bg);overflow:hidden;margin:10px 0 6px}
+.bar i{display:block;height:100%;background:var(--accent);transition:width .4s}
+.big{font-size:32px;font-weight:700;margin:0}
+.big.delayed{color:var(--bad)} .big.ok{color:var(--ok)}
+.kpis{display:flex;gap:12px;flex-wrap:wrap;margin:14px 0 4px}
+.kpi{flex:1 1 150px;background:var(--bg);border-radius:10px;padding:10px 12px}
+.kpi b{display:block;font-size:22px;line-height:1.25}
+.kpi span{color:var(--muted);font-size:12px}
+.conclusion{background:var(--bg);border-left:3px solid var(--accent);
+            border-radius:0 8px 8px 0;padding:12px 14px;margin-top:12px}
+.share{height:8px;border-radius:4px;background:var(--bg);overflow:hidden;min-width:90px}
+.share i{display:block;height:100%;background:var(--accent)}
+header{max-width:1120px;margin:0 auto 20px}
+header .brand{font-size:13px;color:var(--muted);letter-spacing:.02em;margin-bottom:10px}
+nav{display:flex;gap:2px;flex-wrap:wrap;align-items:center;border-bottom:1px solid var(--line)}
+nav a{padding:9px 14px;font-size:14px;color:var(--muted);text-decoration:none;
+      border-bottom:2px solid transparent;white-space:nowrap}
+nav a:hover{color:var(--ink)}
+nav a.here{color:var(--ink);font-weight:600;border-bottom-color:var(--accent)}
+details.menu{position:relative;margin-left:auto}
+details.menu>summary{list-style:none;cursor:pointer;display:inline-flex;align-items:center;gap:9px;
+     padding:7px 13px;margin-bottom:5px;font-size:14px;font-weight:600;white-space:nowrap;
+     color:var(--extra);background:var(--extra-bg);border:1px solid var(--extra-line);
+     border-radius:9px;transition:background .15s,border-color .15s}
+details.menu>summary::-webkit-details-marker{display:none}
+details.menu>summary::marker{content:""}
+details.menu>summary:hover{border-color:var(--extra)}
+details.menu.here>summary{color:#fff;background:var(--extra);border-color:var(--extra)}
+details.menu.here>summary .mdot{background:#fff}
+.mdot{width:8px;height:8px;border-radius:50%;background:var(--extra);flex:none}
+.chev{width:6px;height:6px;border:solid currentColor;border-width:0 1.6px 1.6px 0;
+      transform:rotate(45deg) translate(-1px,-1px);transition:transform .15s}
+details[open] .chev{transform:rotate(-135deg) translate(-2px,-2px)}
+.menucard{position:absolute;right:0;top:calc(100% + 4px);z-index:30;width:340px;
+     max-width:calc(100vw - 32px);background:var(--panel);border:1px solid var(--line);
+     border-radius:13px;box-shadow:0 14px 34px rgba(12,18,30,.18);padding:8px;
+     animation:drop .14s ease-out}
+@keyframes drop{from{opacity:0;transform:translateY(-5px)}}
+.menuhead{padding:9px 10px 11px;font-size:13px;font-weight:700;line-height:1.35}
+.menuhead span{display:block;font-weight:400;color:var(--muted);font-size:12px;margin-top:3px}
+a.mi{display:grid;grid-template-columns:36px 1fr;gap:0 11px;padding:9px 10px;border-radius:10px;
+     text-decoration:none;color:var(--ink);border-bottom:none}
+a.mi i{grid-row:1/3;align-self:center;width:36px;height:36px;border-radius:10px;
+       display:grid;place-items:center}
+a.mi i svg{width:20px;height:20px}
+a.mi b{font-size:14px;line-height:1.3}
+a.mi span{font-size:12px;color:var(--muted);line-height:1.35}
+a.mi:hover{background:var(--bg)}
+a.mi.here{background:var(--bg);box-shadow:inset 0 0 0 1px var(--line)}
+a.mi.cam i{color:var(--cam);background:var(--cam-bg)}
+a.mi.saf i{color:var(--saf);background:var(--saf-bg)}
+a.mi.ing i{color:var(--ing);background:var(--ing-bg)}
+.extrapanel{border-color:var(--extra-line)}
+.extrapanel h2{display:flex;align-items:center;gap:0}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:8px;margin-top:12px}
+.tiles a.mi{background:var(--bg);border:1px solid var(--line);padding:12px}
+.tiles a.mi:hover{border-color:var(--extra)}
+.svc{display:inline-block;vertical-align:middle;margin-left:10px;padding:3px 10px;border-radius:999px;
+     font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;
+     background:var(--bg);color:var(--muted);border:1px solid var(--line)}
+.svc.extra{color:var(--extra);border-color:var(--extra-line);background:var(--extra-bg)}
+form .field{margin-bottom:18px}
+form .field:last-of-type{margin-bottom:8px}
+.drop{border:1px dashed var(--line);border-radius:10px;background:var(--bg);
+      padding:16px;text-align:center}
+.drop input[type=file]{width:100%;border:none;background:none;padding:0;font:inherit;
+                       color:var(--muted);cursor:pointer}
+.drop b{display:block;font-size:14px;margin-bottom:4px;color:var(--ink)}
+.hintline{color:var(--muted);font-size:13px;margin:6px 0 0}
+button.primary{width:100%;padding:13px;font-size:15px}
+.sample{background:var(--bg);border-radius:10px;padding:12px 14px;margin-top:16px}
+.sample a{color:var(--accent)}
+.done{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+.done a{flex:1 1 200px;text-decoration:none;background:var(--bg);border-radius:10px;
+        padding:12px 14px;color:var(--ink);border:1px solid var(--line)}
+.done a:hover{border-color:var(--accent)}
+.done b{display:block;font-size:14px}
+.done span{color:var(--muted);font-size:12px}
+
+.ppe{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.card .pic{position:relative;display:block;line-height:0}
+.card .pic img{width:100%;display:block}
+.card b.box{position:absolute;border:2px solid #21c07a;border-radius:3px}
+.card b.box.bad{border-color:#ff4d4f}
+.card .body{padding:11px 13px}
+.card h3{margin:0 0 6px;font-size:13px;color:var(--muted);font-weight:600;word-break:break-all}
+.card ul{margin:6px 0 0;padding-left:18px;font-size:13px}
+.card li.bad{color:var(--bad)}
+.card .none{font-size:13px;color:var(--ok)}
+</style></head>
+<body><header>
+  <div class="brand">Контроль строительных площадок · ЛЦТ-2026, задача №7</div>
+  <nav><a href="/" class="">Загрузка данных</a><a href="/dashboard" class="">Дашборд руководителя</a><a href="/demo#shifts" class="">Смены по слотам</a><a href="/demo#frames" class="">Просмотр снимков</a><a href="/demo#about" class="">Что мы строим</a>
+    <details class="menu here">
+      <summary title="Второй сервис: видеонаблюдение площадки">
+        <span class="mdot"></span>Дополнительный сервис<span class="chev"></span></summary>
+      <div class="menucard">
+        <div class="menuhead">Видеонаблюдение площадки<span>Самостоятельный сервис: снимает площадку и отдаёт кадры основному</span></div>
+        <a class="mi cam" href="/cameras">
+  <i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2.5" y="6.5" width="14" height="11" rx="2.5"/><path d="M16.5 10.5l5-2.5v8l-5-2.5z"/><circle cx="9.5" cy="12" r="2.6"/></svg></i><b>Камеры объекта</b><span>Живой просмотр, пул снимков, схема обработки</span></a><a class="mi saf here" href="/safety">
+  <i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4.5 13.5a7.5 7.5 0 0115 0"/><path d="M3 13.5h18"/><path d="M9.5 13a9 9 0 012-6.2M14.5 13a9 9 0 00-2-6.2"/><path d="M4 17h16" stroke-linecap="round"/></svg></i><b>Охрана труда</b><span>Отметки моделей с кадром-доказательством</span></a>
+      </div>
+    </details>
+  </nav>
+</header>
+<script>
+// Меню закрывается щелчком мимо и клавишей Esc: без этого оно висит открытым,
+// пока не попадёшь ровно по кнопке.
+document.addEventListener('click', function(event){
+  document.querySelectorAll('details.menu[open]').forEach(function(menu){
+    if(!menu.contains(event.target)){ menu.removeAttribute('open'); }
+  });
+});
+document.addEventListener('keydown', function(event){
+  if(event.key === 'Escape'){
+    document.querySelectorAll('details.menu[open]').forEach(function(menu){
+      menu.removeAttribute('open');
+    });
+  }
+});
+</script><div class="wrap">
+<h1>Каски и жилеты на фото и видео<span class="svc extra">дополнительный сервис</span></h1>
+<p class="sub">Тот же разбор, что на камерах, но по присланным фотографиям и роликам. Из ролика кадры берутся раз в 3 с и разбираются как обычные снимки: ничего особенного для видео в проверке нет.</p>
+<div class="panel"><h2>Что разобрано</h2>
+<div class="kpis">
+  <div class="kpi"><b>17</b><span>файлов</span></div>
+  <div class="kpi"><b>34</b><span>кадров</span></div>
+  <div class="kpi"><b>161</b><span>людей найдено</span></div>
+  <div class="kpi"><b>86</b><span>отметок</span></div>
+  <div class="kpi"><b>27</b><span>без ответа</span></div>
+</div>
+<p class="note">Каска проверяется по голове с плечами, жилет — по фигуре целиком: это
+разные вырезки, и мерялись они порознь. Человек ниже 80 пикселей в разбор не идёт вовсе,
+а о каске не судят, пока вырезка головы меньше 70 пикселей: на съёмке с дрона голова
+занимает сорок, и проверка отмечала отсутствие каски у всех подряд.</p></div>
+<div class="ppe"><div class="card">
+  <a class="pic" href="frames/11798561-hd_1920_1080_50fps-01.jpg">
+    <img src="frames/11798561-hd_1920_1080_50fps-01.jpg" loading="lazy"
+         alt="11798561-hd_1920_1080_50fps.mp4 · 0 с"><b class="box" style="left:68.36%;top:24.44%;width:2.97%;height:18.33%"></b><b class="box" style="left:19.30%;top:28.61%;width:5.70%;height:14.03%"></b><b class="box" style="left:90.47%;top:31.67%;width:3.05%;height:11.39%"></b></a>
+  <div class="body"><h3>11798561-hd_1920_1080_50fps.mp4 · 0 с</h3><p class="none">Людей: 3. Нарушений не отмечено, без ответа 1.</p></div>
+</div><div class="card">
+  <a class="pic" href="frames/11798561-hd_1920_1080_50fps-02.jpg">
+    <img src="frames/11798561-hd_1920_1080_50fps-02.jpg" loading="lazy"
+         alt="11798561-hd_1920_1080_50fps.mp4 · 3 с"><b class="box" style="left:67.97%;top:24.44%;width:3.20%;height:18.06%"></b><b class="box" style="left:83.75%;top:25.56%;width:3.98%;height:18.19%"></b></a>
+  <div class="body"><h3>11798561-hd_1920_1080_50fps.mp4 · 3 с</h3><p class="none">Людей: 2. Нарушений не отмечено.</p></div>
+</div><div class="card">
+  <a class="pic" href="frames/11798561-hd_1920_1080_50fps-03.jpg">
+    <img src="frames/11798561-hd_1920_1080_50fps-03.jpg" loading="lazy"
+         alt="11798561-hd_1920_1080_50fps.mp4 · 6 с"><b class="box" style="left:68.28%;top:24.58%;width:3.05%;height:17.64%"></b><b class="box" style="left:38.75%;top:31.25%;width:2.81%;height:12.08%"></b><b class="box" style="left:76.64%;top:30.69%;width:6.17%;height:11.53%"></b></a>
+  <div class="body"><h3>11798561-hd_1920_1080_50fps.mp4 · 6 с</h3><p class="none">Людей: 3. Нарушений не отмечено.</p></div>
+</div><div class="card">
+  <a class="pic" href="frames/11798561-hd_1920_1080_50fps-04.jpg">
+    <img src="frames/11798561-hd_1920_1080_50fps-04.jpg" loading="lazy"
+         alt="11798561-hd_1920_1080_50fps.mp4 · 9 с"><b class="box" style="left:13.05%;top:26.39%;width:5.62%;height:11.39%"></b><b class="box" style="left:37.50%;top:31.11%;width:3.12%;height:12.22%"></b><b class="box" style="left:70.23%;top:24.31%;width:4.14%;height:16.25%"></b><b class="box" style="left:78.28%;top:26.39%;width:5.70%;height:16.67%"></b><b class="box" style="left:18.44%;top:87.08%;width:3.91%;height:11.25%"></b></a>
+  <div class="body"><h3>11798561-hd_1920_1080_50fps.mp4 · 9 с</h3><p class="none">Людей: 5. Нарушений не отмечено, без ответа 2.</p></div>
+</div><div class="card">
+  <a class="pic" href="frames/13752015_3840_2160_50fps-01.jpg">
+    <img src="frames/13752015_3840_2160_50fps-01.jpg" loading="lazy"
+         alt="13752015_3840_2160_50fps.mp4 · 0 с"><b class="box" style="left:47.23%;top:37.62%;width:10.88%;height:25.31%"></b><b class="box" style="left:47.23%;top:37.62%;width:10.88%;height:8.07%"></b><b class="box bad" style="left:48.85%;top:64.36%;width:5.04%;height:11.49%"></b><b class="box" style="left:18.50%;top:54.65%;width:1.92%;height:8.07%"></b></a>
+  <div class="body"><h3>13752015_3840_2160_50fps.mp4 · 0 с</h3><p class="note">Людей: 3</p><ul><li class="bad">Рабочий без сигнального жилета — уверенность 0.78</li></ul></div>
+</div><div class="card">
+  <a class="pic" href="frames/13752015_3840_2160_50fps-02.jpg">
+    <img src="frames/13752015_3840_2160_50fps-02.jpg" loading="lazy"
+         alt="13752015_3840_2160_50fps.mp4 · 3 с"><b class="box" style="left:44.46%;top:39.47%;width:7.54%;height:27.70%"></b><b class="box" style="left:44.46%;top:39.47%;width:7.54%;height:8.82%"></b><b class="box" style="left:43.73%;top:60.33%;width:6.62%;height:7.52%"></b><b class="box" style="left:15.15%;top:59.10%;width:1.62%;height:6.43%"></b></a>
+  <div class="body"><h3>13752015_3840_2160_50fps.mp4 · 3 с</h3><p class="none">Людей: 3. Нарушений не отмечено, без ответа 1.</p></div>
+</div><div class="card">
+  <a class="pic" href="frames/13752015_3840_2160_50fps-03.jpg">
+    <img src="frames/13752015_3840_2160_50fps-03.jpg" loading="lazy"
+         alt="13752015_3840_2160_50fps.mp4 · 6 с"><b class="box" style="left:47.38%;top:40.70%;width:8.00%;height:30.03%"></b><b class="box" style="left:47.38%;top:40.70%;width:8.00%;height:9.58%"></b><b class="box" style="left:47.65%;top:60.33%;width:7.31%;height:6.77%"></b></a>
+  <div class="body"><h3>13752015_3840_2160_50fps.mp4 · 6 с</h3><p class="none">Людей: 2. Нарушений не отмечено.</p></div>
+</div><div class="card">
+  <a class="pic" href="frames/13752015_3840_2160_50fps-04.jpg">
+    <img src="frames/13752015_3840_2160_50fps-04.jpg" loading="lazy"
+         alt="13752015_3840_2160_50fps.mp4 · 9 с"><b class="box bad" style="left:68.04%;top:34.61%;width:14.19%;height:38.37%"></b><b class="box" style="left:68.04%;top:34.61%;width:14.19%;height:12.24%"></b><b class="box" style="left:68.69%;top:60.26%;width:16.00%;height:33.58%"></b><b class="box" style="left:68.69%;top:60.26%;width:16.00%;height:10.74%"></b><b class="box" style="left:64.46%;top:60.19%;width:11.15%;height:14.36%"></b><b class="box bad" style="left:64.46%;top:60.19%;width:11.15%;height:4.58%"></b><b class="box" style="left:67.96%;top:60.33%;width:11.65%;height:11.49%"></b><b class="box bad" style="left:77.58%;top:77.22%;width:6.96%;height:13.89%"></b><b class="box bad" style="left:77.58%;top:77.22%;width:6.96%;height:4.38%"></b></a>
+  <div class="body"><h3>13752015_3840_2160_50fps.mp4 · 9 с</h3><p class="note">Людей: 5</p><ul><li class="bad">Рабочий без сигнального жилета — уверенность 0.58</li><li class="bad">Рабочий без защитной каски — уверенность 0.63</li><li class="bad">Рабочий без сигнального жилета — уверенность 0.69</li><li class="bad">Рабочий без защитной каски — уверенность 0.43</li></ul></div>
+</div><div class="card">
+  <a class="pic" href="frames/13752015_3840_2160_50fps-05.jpg">
+    <img src="frames/13752015_3840_2160_50fps-05.jpg" loading="lazy"
+         alt="13752015_3840_2160_50fps.mp4 · 12 с"></a>
+  <div class="body"><h3>13752015_3840_2160_50fps.mp4 · 12 с</h3><p class="none">Людей крупнее порога в кадре нет — проверять нечего.</p></div>
+</div><div class="card">
+  <a class="pic" href="frames/14143533-uhd_3840_2160_25fps-01.jpg">
+    <img src="frames/14143533-uhd_3840_2160_25fps-01.jpg" loading="lazy"
+         alt="14143533-uhd_3840_2160_25fps.mp4 · 0 с"><b class="box" style="left:39.65%;top:66.07%;width:3.54%;height:7.66%"></b><b class="box" style="left:64.85%;top:62.59%;width:3.35%;height:7.59%"></b><b class="box" style="left:67.04%;top:21.00%;width:2.12%;height:7.93%"></b><b class="box" style="left:50.46%;top:41.52%;width:2.92%;height:5.68%"></b><b class="box" style="left:84.46%;top:32.22%;width:2.46%;height:6.50%"></b><b class="box" style="left:74.12%;top:36.94%;width:1.96%;height:7.93%"></b><b class="box" style="left:60.19%;top:26.33%;width:1.77%;height:7.80%"></b><b class="box" style="left:58.58%;top:27.70%;width:1.62%;height:7.93%"></b><b class="box" style="left:22.58%;top:34.34%;width:2.12%;height:5.54%"></b></a>
+  <div class="body"><h3>14143533-uhd_3840_2160_25fps.mp4 · 0 с</h3><p class="none">Людей: 9. Нарушений не отмечено, без ответа 4.</p></div>
+</div><div class="card">
+  <a class="pic" href="frames/14143533-uhd_3840_2160_25fps-02.jpg">
+    <img src="frames/14143533-uhd_3840_2160_25fps-02.jpg" loading="lazy"
+         alt="14143533-uhd_3840_2160_25fps.mp4 · 3 с"><b class="box" style="left:81.62%;top:61.70%;width:2.54%;height:11.08%"></b><b class="box" style="left:17.38%;top:57.25%;width:3.92%;height:6.91%"></b><b class="box bad" style="left:94.00%;top:55.06%;width:3.15%;height:8.07%"></b><b class="box" style="left:51.96%;top:69.56%;width:3.42%;height:6.84%"></b><b class="box" style="left:63.46%;top:46.03%;width:2.19%;height:9.23%"></b><b class="box" style="left:61.54%;top:48.43%;width:2.00%;height:9.23%"></b><b class="box bad" style="left:70.42%;top:39.19%;width:2.38%;height:7.46%"></b><b class="box" style="left:42.38%;top:31.74%;width:2.69%;height:5.61%"></b><b class="box bad" style="left:55.04%;top:46.17%;width:1.88%;height:6.22%"></b><b class="box" style="left:32.46%;top:44.25%;width:1.96%;height:5.81%"></b></a>
+  <div class="body"><h3>14143533-uhd_3840_2160_25fps.mp4 · 3 с</h3><p class="note">Людей: 10</p><ul><li class="bad">Рабочий без сигнального жилета — уверенность 0.57</li><li class="bad">Рабочий без сигнального жилета — уверенность 0.55</li><li class="bad">Рабочий без сигнального жилета — уверенность 0.61</li></ul></div>
+</div><div class="card">
+  <a class="pic" href="frames/14143533-uhd_3840_2160_25fps-03.jpg">
+    <img src="frames/14143533-uhd_3840_2160_25fps-03.jpg" loading="lazy"
+         alt="14143533-uhd_3840_2160_25fps.mp4 · 6 с"><b class="box" style="left:78.65%;top:78.25%;width:4.04%;height:10.26%"></b><b class="box" style="left:40.31%;top:62.93%;width:3.46%;height:6.84%"></b><b class="box" style="left:25.23%;top:89.26%;width:3.08%;height:6.70%"></b></a>
+  <div class="body"><h3>14143533-uhd_3840_2160_25fps.mp4 · 6 с</h3><p class="none">Людей: 3. Нарушений не отмечено, без ответа 1.</p></div>
+</div><div class="card">
+  <a class="pic" href="frames/14990691_2160_3840_30fps-01.jpg">
+    <img src="frames/14990691_2160_3840_30fps-01.jpg" loading="lazy"
+         alt="14990691_2160_3840_30fps.mp4 · 0 с"><b class="box" style="left:22.23%;top:66.46%;width:18.95%;height:22.42%"></b><b class="box" style="left:22.23%;top:66.46%;width:18.95%;height:7.15%"></b><b class="box bad" style="left:5.95%;top:52.15%;width:14.84%;height:24.08%"></b><b class="box" style="left:5.95%;top:52.15%;width:14.84%;height:7.69%"></b><b class="box bad" style="left:76.06%;top:25.73%;width:2.94%;height:4.73%"></b><b class="box" style="left:14.16%;top:86.54%;width:24.90%;height:13.08%"></b><b class="box bad" style="left:14.16%;top:86.54%;width:24.90%;height:4.15%"></b><b class="box" style="left:4.58%;top:51.65%;width:17.72%;height:10.12%"></b><b class="box" style="left:4.58%;top:51.65%;width:17.72%;height:3.23%"></b><b class="box bad" style="left:68.88%;top:27.73%;width:2.39%;height:3.85%"></b><b class="box" style="left:4.79%;top:51.58%;width:9.51%;height:9.19%"></b><b class="box bad" style="left:4.79%;top:51.58%;width:9.51%;height:2.92%"></b></a>
+  <div class="body"><h3>14990691_2160_3840_30fps.mp4 · 0 с</h3><p class="note">Людей: 7</p><ul><li class="bad">Рабочий без сигнального жилета — уверенность 0.67</li><li class="bad">Рабочий без сигнального жилета — уверенность 0.57</li><li class="bad">Рабочий без защитной каски — уверенность 0.24</li><li class="bad">Рабочий без сигнального жилета — уверенность 0.58</li><li class="bad">Рабочий без защитной каски — уверенность 0.22</li></ul></div>
+</div><div class="card">
+  <a class="pic" href="frames/14990691_2160_3840_30fps-02.jpg">
+    <img src="frames/14990691_2160_3840_30fps-02.jpg" loading="lazy"
+         alt="14990691_2160_3840_30fps.mp4 · 3 с"><b class="box" style="left:25.24%;top:82.73%;width:22.91%;height:16.92%"></b><b class="box bad" style="left:25.24%;top:82.73%;width:22.91%;height:5.38%"></b><b class="box bad" style="left:5.95%;top:52.58%;width:14.02%;height:23.77%"></b><b class="box" style="left:5.95%;top:52.58%;width:14.02%;height:7.58%"></b><b class="box bad" style="left:76.06%;top:25.81%;width:2.94%;height:5.00%"></b><b class="box" style="left:64.23%;top:76.88%;width:19.84%;height:22.92%"></b><b class="box" style="left:64.23%;top:76.88%;width:19.84%;height:7.31%"></b><b class="box" style="left:3.83%;top:52.00%;width:9.51%;height:7.69%"></b><b class="box bad" style="left:3.83%;top:52.00%;width:9.51%;height:2.46%"></b><b class="box" style="left:69.02%;top:27.58%;width:2.33%;height:4.19%"></b></a>
+  <div class="body"><h3>14990691_2160_3840_30fps.mp4 · 3 с</h3><p class="note">Людей: 6</p><ul><li class="bad">Рабочий без защитной каски — уверенность 0.13</li><li class="bad">Рабочий без сигнального жилета — уверенность 0.62</li><li class="bad">Рабочий без сигнального жилета — уверенность 0.68</li><li class="bad">Рабочий без защитной каски — уверенность 0.17</li></ul></div>
+</div><div class="card">
+  <a class="pic" href="frames/14990691_2160_3840_30fps-03.jpg">
+    <img src="frames/14990691_2160_3840_30fps-03.jpg" loading="lazy"
+         alt="14990691_2160_3840_30fps.mp4 · 6 с"><b class="box" style="left:44.25%;top:78.92%;width:20.93%;height:20.58%"></b><b class="box" style="left:44.25%;top:78.92%;width:20.93%;height:6.58%"></b><b class="box bad" style="left:6.57%;top:52.62%;width:13.95%;height:24.08%"></b><b class="box" style="left:6.57%;top:52.62%;width:13.95%;height:7.69%"></b><b class="box" style="left:75.92%;top:25.81%;width:3.08%;height:4.88%"></b><b class="box" style="left:3.69%;top:52.08%;width:9.17%;height:9.23%"></b><b class="box" style="left:3.69%;top:52.08%;width:9.17%;height:2.92%"></b><b class="box" style="left:93.78%;top:83.50%;width:6.22%;height:6.50%"></b><b class="box" style="left:0.07%;top:56.69%;width:11.70%;height:18.08%"></b><b class="box bad" style="left:0.07%;top:56.69%;width:11.70%;height:5.77%"></b></a>
+  <div class="body"><h3>14990691_2160_3840_30fps.mp4 · 6 с</h3><p class="note">Людей: 6</p><ul><li class="bad">Рабочий без сигнального жилета — уверенность 0.65</li><li class="bad">Рабочий без защитной каски — уверенность 0.42</li></ul></div>
+</div><div class="card">
+  <a class="pic" href="frames/14990691_2160_3840_30fps-04.jpg">
+    <img src="frames/14990691_2160_3840_30fps-04.jpg" loading="lazy"
+         alt="14990691_2160_3840_30fps.mp4 · 9 с"><b class="box" style="left:59.37%;top:76.73%;width:17.99%;height:22.88%"></b><b class="box" style="left:59.37%;top:76.73%;width:17.99%;height:7.31%"></b><b class="box bad" style="left:10.12%;top:53.62%;width:12.86%;height:25.42%"></b><b class="box" style="left:10.12%;top:53.62%;width:12.86%;height:8.12%"></b><b class="box bad" style="left:0.07%;top:54.42%;width:12.38%;height:16.96%"></b><b class="box" style="left:0.07%;top:54.42%;width:12.38%;height:5.42%"></b><b class="box" style="left:54.58%;top:25.58%;width:3.15%;height:4.62%"></b><b class="box" style="left:51.64%;top:25.50%;width:3.69%;height:4.96%"></b></a>
+  <div class="body"><h3>14990691_2160_3840_30fps.mp4 · 9 с</h3><p class="note">Людей: 5</p><ul><li class="bad">Рабочий без сигнального жилета — уверенность 0.75</li><li class="bad">Рабочий без сигнального жилета — уверенность 0.72</li></ul></div>
+</div><div class="card">
+  <a class="pic" href="frames/14990691_2160_3840_30fps-05.jpg">
+    <img src="frames/14990691_2160_3840_30fps-05.jpg" loading="lazy"
+         alt="14990691_2160_3840_30fps.mp4 · 12 с"><b class="box" style="left:53.56%;top:78.73%;width:19.97%;height:20.77%"></b><b class="box" style="left:53.56%;top:78.73%;width:19.97%;height:6.62%"></b><b class="box bad" style="left:0.48%;top:55.62%;width:15.12%;height:26.73%"></b><b class="box" style="left:0.48%;top:55.62%;width:15.12%;height:8.54%"></b><b class="box bad" style="left:46.37%;top:25.58%;width:3.15%;height:5.31%"></b><b class="box" style="left:53.35%;top:24.38%;width:2.26%;height:3.85%"></b></a>
+  <div class="body"><h3>14990691_2160_3840_30fps.mp4 · 12 с</h3><p class="note">Людей: 4</p><ul><li class="bad">Рабочий без сигнального жилета — уверенность 0.80</li><li class="bad">Рабочий без сигнального жилета — уверенность 0.65</li></ul></div>
+</div><div class="card">
+  <a class="pic" href="frames/14990691_2160_3840_30fps-06.jpg">
+    <img src="frames/14990691_2160_3840_30fps-06.jpg" loading="lazy"
+         alt="14990691_2160_3840_30fps.mp4 · 15 с"><b class="box" style="left:59.58%;top:76.31%;width:23.05%;height:23.31%"></b><b class="box" style="left:59.58%;top:76.31%;width:23.05%;height:7.42%"></b><b class="box bad" style="left:4.99%;top:50.38%;width:15.32%;height:28.38%"></b><b class="box" style="left:4.99%;top:50.38%;width:15.32%;height:9.08%"></b><b class="box bad" style="left:55.34%;top:24.50%;width:2.80%;height:5.15%"></b><b class="box bad" style="left:53.69%;top:24.65%;width:2.60%;height:5.00%"></b></a>
+  <div class="body"><h3>14990691_2160_3840_30fps.mp4 · 15 с</h3><p class="note">Людей: 4</p><ul><li class="bad">Рабочий без сигнального жилета — уверенность 0.83</li><li class="bad">Рабочий без сигнального жилета — уверенность 0.62</li><li class="bad">Рабочий без сигнального жилета — уверенность 0.66</li></ul></div>
+</div><div class="card">
+  <a class="pic" href="frames/14990691_2160_3840_30fps-07.jpg">
+    <img src="frames/14990691_2160_3840_30fps-07.jpg" loading="lazy"
+         alt="14990691_2160_3840_30fps.mp4 · 18 с"><b class="box bad" style="left:12.45%;top:50.31%;width:14.43%;height:29.46%"></b><b class="box" style="left:12.45%;top:50.31%;width:14.43%;height:9.42%"></b><b class="box" style="left:67.78%;top:77.50%;width:20.52%;height:22.15%"></b><b class="box" style="left:67.78%;top:77.50%;width:20.52%;height:7.08%"></b><b class="box" style="left:73.39%;top:61.62%;width:26.20%;height:23.42%"></b><b class="box" style="left:73.39%;top:61.62%;width:26.20%;height:7.46%"></b><b class="box" style="left:0.14%;top:51.96%;width:12.38%;height:18.88%"></b><b class="box bad" style="left:0.14%;top:51.96%;width:12.38%;height:6.04%"></b></a>
+  <div class="body"><h3>14990691_2160_3840_30fps.mp4 · 18 с</h3><p class="note">Людей: 4</p><ul><li class="bad">Рабочий без сигнального жилета — уверенность 0.84</li><li class="bad">Рабочий без защитной каски — уверенность 0.19</li></ul></div>
+</div><div class="card">
+  <a class="pic" href="frames/14990691_2160_3840_30fps-08.jpg">
+    <img src="frames/14990691_2160_3840_30fps-08.jpg" loading="lazy"
+         alt="14990691_2160_3840_30fps.mp4 · 21 с"><b class="box bad" style="left:12.65%;top:50.65%;width:13.54%;height:28.77%"></b><b class="box" style="left:12.65%;top:50.65%;width:13.54%;height:9.19%"></b><b class="box bad" style="left:1.09%;top:50.42%;width:12.86%;height:21.08%"></b><b class="box" style="left:1.09%;top:50.42%;width:12.86%;height:6.73%"></b></a>
+  <div class="body"><h3>14990691_2160_3840_30fps.mp4 · 21 с</h3><p class="note">Людей: 2</p><ul><li class="bad">Рабочий без сигнального жилета — уверенность 0.64</li><li class="bad">Рабочий без сигнального жилета — уверенность 0.66</li></ul></div>
+</div><div class="card">
+  <a class="pic" href="frames/14990691_2160_3840_30fps-09.jpg">
+    <img src="frames/14990691_2160_3840_30fps-09.jpg" loading="lazy"
+         alt="14990691_2160_3840_30fps.mp4 · 24 с"><b class="box bad" style="left:12.38%;top:50.96%;width:14.36%;height:28.96%"></b><b class="box" style="left:12.38%;top:50.96%;width:14.36%;height:9.23%"></b><b class="box" style="left:0.00%;top:52.31%;width:14.02%;height:19.50%"></b><b class="box bad" style="left:0.00%;top:52.31%;width:14.02%;height:6.23%"></b></a>
+  <div class="body"><h3>14990691_2160_3840_30fps.mp4 · 24 с</h3><p class="note">Людей: 2</p><ul><li class="bad">Рабочий без сигнального жилета — уверенность 0.79</li><li class="bad">Рабочий без защитной каски — уверенность 0.13</li></ul></div>
+</div><div class="card">
+  <a class="pic" href="frames/pexels-borishamer-14367425.jpg">
+    <img src="frames/pexels-borishamer-14367425.jpg" loading="lazy"
+         alt="pexels-borishamer-14367425.jpg"><b class="box" style="left:38.78%;top:43.35%;width:22.56%;height:37.27%"></b><b class="box" style="left:38.78%;top:43.35%;width:22.56%;height:11.92%"></b><b class="box" style="left:75.25%;top:40.88%;width:21.81%;height:26.50%"></b><b class="box" style="left:75.25%;top:40.88%;width:21.81%;height:8.46%"></b><b class="box" style="left:59.84%;top:43.35%;width:4.21%;height:6.69%"></b><b class="box bad" style="left:70.57%;top:40.69%;width:1.79%;height:4.62%"></b></a>
+  <div class="body"><h3>pexels-borishamer-14367425.jpg</h3><p class="note">Людей: 4</p><ul><li class="bad">Рабочий без сигнального жилета — уверенность 0.64</li></ul></div>
+</div><div class="card">
+  <a class="pic" href="frames/pexels-borishamer-14367438.jpg">
+    <img src="frames/pexels-borishamer-14367438.jpg" loading="lazy"
+         alt="pexels-borishamer-14367438.jpg"><b class="box bad" style="left:43.62%;top:47.77%;width:11.02%;height:16.31%"></b><b class="box" style="left:43.62%;top:47.77%;width:11.02%;height:5.19%"></b></a>
+  <div class="body"><h3>pexels-borishamer-14367438.jpg</h3><p class="note">Людей: 1</p><ul><li class="bad">Рабочий без сигнального жилета — уверенность 0.57</li></ul></div>
+</div><div class="card">
+  <a class="pic" href="frames/pexels-bulat843-1243575272-39133843.jpg">
+    <img src="frames/pexels-bulat843-1243575272-39133843.jpg" loading="lazy"
+         alt="pexels-bulat843-1243575272-39133843.jpg"><b class="box bad" style="left:16.36%;top:44.35%;width:68.10%;height:36.31%"></b><b class="box bad" style="left:16.36%;top:44.35%;width:68.10%;height:11.62%"></b><b class="box bad" style="left:16.97%;top:11.12%;width:40.66%;height:67.08%"></b><b class="box bad" style="left:16.97%;top:11.12%;width:40.66%;height:21.46%"></b></a>
+  <div class="body"><h3>pexels-bulat843-1243575272-39133843.jpg</h3><p class="note">Людей: 2</p><ul><li class="bad">Рабочий без сигнального жилета — уверенность 0.76</li><li class="bad">Рабочий без защитной каски — уверенность 0.34</li><li class="bad">Рабочий без сигнального жилета — уверенность 0.83</li><li class="bad">Рабочий без защитной каски — уверенность 0.19</li></ul></div>
+</div><div class="card">
+  <a class="pic" href="frames/pexels-cadis-ioan-2087170528-33041003.jpg">
+    <img src="frames/pexels-cadis-ioan-2087170528-33041003.jpg" loading="lazy"
+         alt="pexels-cadis-ioan-2087170528-33041003.jpg"><b class="box" style="left:56.49%;top:32.15%;width:13.73%;height:19.19%"></b><b class="box" style="left:56.49%;top:32.15%;width:13.73%;height:6.12%"></b><b class="box" style="left:75.48%;top:49.08%;width:18.81%;height:28.73%"></b><b class="box" style="left:75.48%;top:49.08%;width:18.81%;height:9.19%"></b><b class="box bad" style="left:78.42%;top:62.23%;width:8.37%;height:8.31%"></b><b class="box" style="left:78.42%;top:62.23%;width:8.37%;height:2.65%"></b></a>
+  <div class="body"><h3>pexels-cadis-ioan-2087170528-33041003.jpg</h3><p class="note">Людей: 3</p><ul><li class="bad">Рабочий без сигнального жилета — уверенность 0.65</li></ul></div>
+</div><div class="card">
+  <a class="pic" href="frames/pexels-ec-lipse-263453583-23336593.jpg">
+    <img src="frames/pexels-ec-lipse-263453583-23336593.jpg" loading="lazy"
+         alt="pexels-ec-lipse-263453583-23336593.jpg"></a>
+  <div class="body"><h3>pexels-ec-lipse-263453583-23336593.jpg</h3><p class="none">Людей крупнее порога в кадре нет — проверять нечего.</p></div>
+</div><div class="card">
+  <a class="pic" href="frames/pexels-jalekho-37779771.jpg">
+    <img src="frames/pexels-jalekho-37779771.jpg" loading="lazy"
+         alt="pexels-jalekho-37779771.jpg"><b class="box bad" style="left:21.98%;top:21.50%;width:46.86%;height:66.31%"></b><b class="box" style="left:21.98%;top:21.50%;width:46.86%;height:21.19%"></b></a>
+  <div class="body"><h3>pexels-jalekho-37779771.jpg</h3><p class="note">Людей: 1</p><ul><li class="bad">Рабочий без сигнального жилета — уверенность 0.77</li></ul></div>
+</div><div class="card">
+  <a class="pic" href="frames/pexels-mesut-yalcin-1233429888-28906308.jpg">
+    <img src="frames/pexels-mesut-yalcin-1233429888-28906308.jpg" loading="lazy"
+         alt="pexels-mesut-yalcin-1233429888-28906308.jpg"><b class="box" style="left:46.34%;top:38.92%;width:35.83%;height:60.96%"></b><b class="box" style="left:46.34%;top:38.92%;width:35.83%;height:19.50%"></b><b class="box" style="left:0.87%;top:39.88%;width:36.18%;height:59.73%"></b><b class="box bad" style="left:0.87%;top:39.88%;width:36.18%;height:19.08%"></b><b class="box" style="left:74.55%;top:36.12%;width:25.33%;height:63.04%"></b><b class="box" style="left:74.55%;top:36.12%;width:25.33%;height:20.15%"></b><b class="box" style="left:24.12%;top:39.27%;width:23.89%;height:52.15%"></b><b class="box" style="left:24.12%;top:39.27%;width:23.89%;height:16.65%"></b><b class="box" style="left:46.05%;top:38.92%;width:12.69%;height:17.15%"></b><b class="box" style="left:46.05%;top:38.92%;width:12.69%;height:5.46%"></b><b class="box" style="left:0.35%;top:34.62%;width:19.79%;height:23.73%"></b><b class="box bad" style="left:0.35%;top:34.62%;width:19.79%;height:7.58%"></b><b class="box" style="left:79.05%;top:38.50%;width:7.27%;height:8.50%"></b><b class="box bad" style="left:79.05%;top:38.50%;width:7.27%;height:2.69%"></b><b class="box" style="left:31.39%;top:38.96%;width:8.89%;height:8.88%"></b><b class="box bad" style="left:31.39%;top:38.96%;width:8.89%;height:2.81%"></b><b class="box" style="left:0.46%;top:35.85%;width:19.45%;height:47.27%"></b><b class="box bad" style="left:0.46%;top:35.85%;width:19.45%;height:15.12%"></b><b class="box" style="left:74.50%;top:38.54%;width:11.66%;height:14.81%"></b><b class="box" style="left:74.50%;top:38.54%;width:11.66%;height:4.73%"></b><b class="box" style="left:31.68%;top:39.27%;width:17.60%;height:22.04%"></b><b class="box" style="left:31.68%;top:39.27%;width:17.60%;height:7.04%"></b><b class="box" style="left:67.28%;top:41.35%;width:6.12%;height:9.73%"></b><b class="box" style="left:67.28%;top:41.35%;width:6.12%;height:3.08%"></b></a>
+  <div class="body"><h3>pexels-mesut-yalcin-1233429888-28906308.jpg</h3><p class="note">Людей: 12</p><ul><li class="bad">Рабочий без защитной каски — уверенность 0.29</li><li class="bad">Рабочий без защитной каски — уверенность 0.23</li><li class="bad">Рабочий без защитной каски — уверенность 0.15</li><li class="bad">Рабочий без защитной каски — уверенность 0.23</li><li class="bad">Рабочий без защитной каски — уверенность 0.20</li></ul></div>
+</div><div class="card">
+  <a class="pic" href="frames/pexels-myatezhny39-2209529.jpg">
+    <img src="frames/pexels-myatezhny39-2209529.jpg" loading="lazy"
+         alt="pexels-myatezhny39-2209529.jpg"><b class="box" style="left:50.20%;top:65.31%;width:16.72%;height:23.54%"></b><b class="box bad" style="left:50.20%;top:65.31%;width:16.72%;height:7.50%"></b><b class="box" style="left:45.68%;top:45.15%;width:11.78%;height:17.69%"></b><b class="box bad" style="left:45.68%;top:45.15%;width:11.78%;height:5.65%"></b><b class="box bad" style="left:42.54%;top:27.65%;width:9.17%;height:14.50%"></b><b class="box" style="left:42.54%;top:27.65%;width:9.17%;height:4.62%"></b><b class="box bad" style="left:12.94%;top:90.50%;width:20.20%;height:9.50%"></b><b class="box bad" style="left:12.94%;top:90.50%;width:20.20%;height:3.04%"></b><b class="box" style="left:36.16%;top:93.15%;width:13.46%;height:6.81%"></b><b class="box bad" style="left:36.16%;top:93.15%;width:13.46%;height:2.15%"></b><b class="box" style="left:41.21%;top:17.15%;width:7.31%;height:7.92%"></b><b class="box bad" style="left:41.21%;top:17.15%;width:7.31%;height:2.50%"></b><b class="box bad" style="left:37.38%;top:15.96%;width:4.70%;height:9.31%"></b><b class="box" style="left:37.38%;top:15.96%;width:4.70%;height:2.96%"></b><b class="box" style="left:38.48%;top:16.04%;width:7.43%;height:9.65%"></b><b class="box bad" style="left:38.48%;top:16.04%;width:7.43%;height:3.08%"></b></a>
+  <div class="body"><h3>pexels-myatezhny39-2209529.jpg</h3><p class="note">Людей: 8</p><ul><li class="bad">Рабочий без защитной каски — уверенность 0.12</li><li class="bad">Рабочий без защитной каски — уверенность 0.24</li><li class="bad">Рабочий без сигнального жилета — уверенность 0.59</li><li class="bad">Рабочий без сигнального жилета — уверенность 0.57</li><li class="bad">Рабочий без защитной каски — уверенность 0.44</li><li class="bad">Рабочий без защитной каски — уверенность 0.16</li><li class="bad">Рабочий без защитной каски — уверенность 0.21</li><li class="bad">Рабочий без сигнального жилета — уверенность 0.64</li><li class="bad">Рабочий без защитной каски — уверенность 0.33</li></ul></div>
+</div><div class="card">
+  <a class="pic" href="frames/pexels-sejio402-29181494.jpg">
+    <img src="frames/pexels-sejio402-29181494.jpg" loading="lazy"
+         alt="pexels-sejio402-29181494.jpg"><b class="box" style="left:49.46%;top:14.14%;width:25.81%;height:48.87%"></b><b class="box" style="left:49.46%;top:14.14%;width:25.81%;height:15.64%"></b><b class="box bad" style="left:67.69%;top:21.64%;width:29.08%;height:31.91%"></b><b class="box bad" style="left:67.69%;top:21.64%;width:29.08%;height:10.16%"></b><b class="box bad" style="left:49.35%;top:50.95%;width:19.81%;height:22.85%"></b><b class="box bad" style="left:49.35%;top:50.95%;width:19.81%;height:7.27%"></b></a>
+  <div class="body"><h3>pexels-sejio402-29181494.jpg</h3><p class="note">Людей: 3</p><ul><li class="bad">Рабочий без сигнального жилета — уверенность 0.76</li><li class="bad">Рабочий без защитной каски — уверенность 0.68</li><li class="bad">Рабочий без сигнального жилета — уверенность 0.77</li><li class="bad">Рабочий без защитной каски — уверенность 0.43</li></ul></div>
+</div><div class="card">
+  <a class="pic" href="frames/pexels-shotbysylvesterabigail-17745340.jpg">
+    <img src="frames/pexels-shotbysylvesterabigail-17745340.jpg" loading="lazy"
+         alt="pexels-shotbysylvesterabigail-17745340.jpg"><b class="box bad" style="left:48.09%;top:34.77%;width:11.09%;height:15.50%"></b><b class="box" style="left:48.09%;top:34.77%;width:11.09%;height:4.92%"></b><b class="box" style="left:35.11%;top:40.50%;width:9.85%;height:8.38%"></b><b class="box" style="left:35.11%;top:40.50%;width:9.85%;height:2.65%"></b><b class="box" style="left:24.12%;top:80.23%;width:12.01%;height:18.23%"></b><b class="box" style="left:24.12%;top:80.23%;width:12.01%;height:5.81%"></b><b class="box bad" style="left:24.50%;top:80.31%;width:10.82%;height:10.08%"></b><b class="box" style="left:24.50%;top:80.31%;width:10.82%;height:3.19%"></b></a>
+  <div class="body"><h3>pexels-shotbysylvesterabigail-17745340.jpg</h3><p class="note">Людей: 4</p><ul><li class="bad">Рабочий без сигнального жилета — уверенность 0.56</li><li class="bad">Рабочий без сигнального жилета — уверенность 0.64</li></ul></div>
+</div><div class="card">
+  <a class="pic" href="frames/pexels-thisvikto-10202865.jpg">
+    <img src="frames/pexels-thisvikto-10202865.jpg" loading="lazy"
+         alt="pexels-thisvikto-10202865.jpg"><b class="box" style="left:37.31%;top:15.47%;width:32.85%;height:52.48%"></b><b class="box" style="left:37.31%;top:15.47%;width:32.85%;height:16.77%"></b><b class="box" style="left:67.73%;top:6.93%;width:23.08%;height:60.40%"></b><b class="box" style="left:67.73%;top:6.93%;width:23.08%;height:19.31%"></b><b class="box" style="left:58.92%;top:6.62%;width:16.54%;height:60.95%"></b><b class="box" style="left:58.92%;top:6.62%;width:16.54%;height:19.49%"></b><b class="box bad" style="left:33.85%;top:54.52%;width:21.65%;height:39.79%"></b><b class="box bad" style="left:33.85%;top:54.52%;width:21.65%;height:12.69%"></b><b class="box bad" style="left:68.92%;top:54.58%;width:10.42%;height:38.49%"></b><b class="box bad" style="left:68.92%;top:54.58%;width:10.42%;height:12.31%"></b><b class="box" style="left:63.38%;top:28.71%;width:8.46%;height:38.68%"></b><b class="box" style="left:63.38%;top:28.71%;width:8.46%;height:12.38%"></b><b class="box" style="left:67.81%;top:7.30%;width:8.31%;height:38.92%"></b><b class="box" style="left:67.81%;top:7.30%;width:8.31%;height:12.44%"></b><b class="box" style="left:7.31%;top:29.58%;width:8.38%;height:38.49%"></b><b class="box" style="left:7.31%;top:29.58%;width:8.38%;height:12.31%"></b><b class="box" style="left:24.38%;top:33.91%;width:7.81%;height:30.01%"></b><b class="box" style="left:24.38%;top:33.91%;width:7.81%;height:9.59%"></b><b class="box bad" style="left:8.54%;top:54.64%;width:8.31%;height:21.29%"></b><b class="box bad" style="left:8.54%;top:54.64%;width:8.31%;height:6.81%"></b><b class="box" style="left:33.42%;top:43.87%;width:8.35%;height:18.25%"></b><b class="box bad" style="left:33.42%;top:43.87%;width:8.35%;height:5.82%"></b><b class="box" style="left:33.73%;top:54.52%;width:8.54%;height:7.43%"></b></a>
+  <div class="body"><h3>pexels-thisvikto-10202865.jpg</h3><p class="note">Людей: 12</p><ul><li class="bad">Рабочий без сигнального жилета — уверенность 0.73</li><li class="bad">Рабочий без защитной каски — уверенность 0.36</li><li class="bad">Рабочий без сигнального жилета — уверенность 0.76</li><li class="bad">Рабочий без защитной каски — уверенность 0.78</li><li class="bad">Рабочий без сигнального жилета — уверенность 0.68</li><li class="bad">Рабочий без защитной каски — уверенность 0.37</li><li class="bad">Рабочий без защитной каски — уверенность 0.42</li></ul></div>
+</div><div class="card">
+  <a class="pic" href="frames/pexels-wal_-172619-2156618639-37636256.jpg">
+    <img src="frames/pexels-wal_-172619-2156618639-37636256.jpg" loading="lazy"
+         alt="pexels-wal_-172619-2156618639-37636256.jpg"><b class="box bad" style="left:5.42%;top:29.27%;width:31.00%;height:34.09%"></b><b class="box" style="left:5.42%;top:29.27%;width:31.00%;height:10.86%"></b><b class="box bad" style="left:36.42%;top:26.36%;width:18.58%;height:37.51%"></b><b class="box" style="left:36.42%;top:26.36%;width:18.58%;height:11.96%"></b><b class="box" style="left:78.81%;top:26.71%;width:15.00%;height:37.11%"></b><b class="box" style="left:78.81%;top:26.71%;width:15.00%;height:11.85%"></b><b class="box" style="left:8.15%;top:51.10%;width:28.38%;height:18.64%"></b><b class="box bad" style="left:8.15%;top:51.10%;width:28.38%;height:5.92%"></b><b class="box bad" style="left:54.65%;top:39.78%;width:19.65%;height:23.93%"></b><b class="box bad" style="left:54.65%;top:39.78%;width:19.65%;height:7.61%"></b><b class="box" style="left:79.15%;top:51.16%;width:15.50%;height:20.03%"></b><b class="box bad" style="left:79.15%;top:51.16%;width:15.50%;height:6.39%"></b><b class="box bad" style="left:38.12%;top:51.22%;width:16.15%;height:19.16%"></b><b class="box bad" style="left:38.12%;top:51.22%;width:16.15%;height:6.10%"></b><b class="box bad" style="left:53.85%;top:51.10%;width:10.62%;height:19.98%"></b><b class="box bad" style="left:53.85%;top:51.10%;width:10.62%;height:6.39%"></b><b class="box" style="left:37.27%;top:0.00%;width:5.04%;height:10.51%"></b><b class="box bad" style="left:37.96%;top:51.16%;width:4.31%;height:9.87%"></b><b class="box" style="left:33.88%;top:51.28%;width:2.58%;height:6.33%"></b></a>
+  <div class="body"><h3>pexels-wal_-172619-2156618639-37636256.jpg</h3><p class="note">Людей: 11</p><ul><li class="bad">Рабочий без сигнального жилета — уверенность 0.59</li><li class="bad">Рабочий без сигнального жилета — уверенность 0.69</li><li class="bad">Рабочий без защитной каски — уверенность 0.62</li><li class="bad">Рабочий без сигнального жилета — уверенность 0.79</li><li class="bad">Рабочий без защитной каски — уверенность 0.12</li><li class="bad">Рабочий без защитной каски — уверенность 0.64</li><li class="bad">Рабочий без сигнального жилета — уверенность 0.86</li><li class="bad">Рабочий без защитной каски — уверенность 0.37</li><li class="bad">Рабочий без сигнального жилета — уверенность 0.67</li><li class="bad">Рабочий без защитной каски — уверенность 0.86</li><li class="bad">Рабочий без сигнального жилета — уверенность 0.87</li></ul></div>
+</div><div class="card">
+  <a class="pic" href="frames/pexels-wolfgang-weiser-467045605-18283441.jpg">
+    <img src="frames/pexels-wolfgang-weiser-467045605-18283441.jpg" loading="lazy"
+         alt="pexels-wolfgang-weiser-467045605-18283441.jpg"><b class="box" style="left:30.08%;top:75.65%;width:3.62%;height:15.46%"></b><b class="box" style="left:30.08%;top:75.65%;width:3.62%;height:4.92%"></b><b class="box bad" style="left:49.88%;top:70.79%;width:3.46%;height:15.18%"></b><b class="box bad" style="left:49.88%;top:70.79%;width:3.46%;height:4.86%"></b><b class="box bad" style="left:38.23%;top:53.56%;width:4.46%;height:11.76%"></b><b class="box bad" style="left:61.38%;top:50.00%;width:3.23%;height:9.85%"></b><b class="box" style="left:55.58%;top:69.63%;width:2.62%;height:9.23%"></b><b class="box bad" style="left:25.62%;top:74.97%;width:2.81%;height:8.00%"></b><b class="box bad" style="left:39.38%;top:54.10%;width:2.00%;height:11.01%"></b><b class="box bad" style="left:63.62%;top:48.43%;width:2.46%;height:7.11%"></b><b class="box bad" style="left:60.31%;top:46.03%;width:1.96%;height:8.69%"></b><b class="box" style="left:76.38%;top:42.48%;width:2.04%;height:7.52%"></b><b class="box" style="left:55.50%;top:50.62%;width:1.73%;height:8.48%"></b><b class="box" style="left:69.42%;top:44.12%;width:1.54%;height:9.03%"></b></a>
+  <div class="body"><h3>pexels-wolfgang-weiser-467045605-18283441.jpg</h3><p class="note">Людей: 12</p><ul><li class="bad">Рабочий без сигнального жилета — уверенность 0.81</li><li class="bad">Рабочий без защитной каски — уверенность 0.12</li><li class="bad">Рабочий без сигнального жилета — уверенность 0.66</li><li class="bad">Рабочий без сигнального жилета — уверенность 0.58</li><li class="bad">Рабочий без сигнального жилета — уверенность 0.60</li><li class="bad">Рабочий без сигнального жилета — уверенность 0.56</li><li class="bad">Рабочий без сигнального жилета — уверенность 0.72</li><li class="bad">Рабочий без сигнального жилета — уверенность 0.58</li></ul></div>
+</div></div>
+</div></body></html>

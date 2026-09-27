@@ -29,6 +29,13 @@ MIN_PERSON_HEIGHT = 80
 MIN_WIDTH_TO_HEIGHT = 0.25
 COLOR_SCALE = 255.0
 MAX_REGIONS = 12
+# Кадр шире этого детектор разбирает по частям. Причина в самой модели: она сжимает вход
+# до 800 пикселей по короткой стороне, и на съёмке с дрона рабочий ростом в полтораста
+# пикселей превращается в полсотни — ниже порога, по которому мы вообще беремся судить.
+TILE_TRIGGER_WIDTH = 2000
+TILE_SIDE = 1100
+TILE_OVERLAP = 0.2
+SAME_BOX_IOU = 0.45
 
 
 class PersonDetector:
@@ -58,15 +65,40 @@ class PersonDetector:
 
     def _detect(self, frame: np.ndarray) -> list[tuple[int, int, int, int]]:
         """Прогоняет кадр через детектор и оставляет людей подходящего роста."""
+        if frame.shape[1] > TILE_TRIGGER_WIDTH:
+            return self._detect_by_tiles(frame)
+        boxes = self._detect_piece(frame)
+        return boxes
+
+    def _detect_piece(self, piece: np.ndarray) -> list[tuple[int, int, int, int]]:
+        """Находит людей на одном изображении."""
         import torch
 
-        tensor = self._to_tensor(frame)
+        tensor = self._to_tensor(piece)
         with self._lock:
             self._load()
             with torch.no_grad():
                 output = self._model([tensor])[0]
         boxes = _filter_people(output, self._score_threshold, self._min_height, self._min_ratio)
         return boxes
+
+    def _detect_by_tiles(self, frame: np.ndarray) -> list[tuple[int, int, int, int]]:
+        """Разбирает крупный кадр по перекрывающимся частям и сводит найденное."""
+        height, width = frame.shape[:2]
+        step = int(TILE_SIDE * (1 - TILE_OVERLAP))
+        found: list[tuple[int, int, int, int]] = []
+        for top in range(0, height, step):
+            for left in range(0, width, step):
+                piece = frame[top : top + TILE_SIDE, left : left + TILE_SIDE]
+                if piece.shape[0] < TILE_SIDE // 2 or piece.shape[1] < TILE_SIDE // 2:
+                    continue
+                found.extend(
+                    (box[0] + left, box[1] + top, box[2] + left, box[3] + top)
+                    for box in self._detect_piece(piece)
+                )
+        merged = _drop_duplicates(found)
+        logger.info("Кадр %dx%d разобран по частям: людей %d", width, height, len(merged))
+        return merged
 
     def _to_tensor(self, frame: np.ndarray) -> Any:
         """Кадр BGR к входу torchvision: RGB, доли единицы, каналы впереди."""
@@ -104,6 +136,31 @@ def _filter_people(
             continue
         boxes.append((left, top, right, bottom))
     return boxes
+
+
+def _drop_duplicates(boxes: list[tuple[int, int, int, int]]) -> list[tuple[int, int, int, int]]:
+    """Убирает повторы: на перекрытии частей один человек находится дважды."""
+    ordered = sorted(boxes, key=lambda box: (box[2] - box[0]) * (box[3] - box[1]), reverse=True)
+    kept: list[tuple[int, int, int, int]] = []
+    for box in ordered:
+        if all(_overlap(box, other) < SAME_BOX_IOU for other in kept):
+            kept.append(box)
+    return kept
+
+
+def _overlap(first: tuple[int, int, int, int], second: tuple[int, int, int, int]) -> float:
+    """Доля пересечения двух рамок."""
+    left = max(first[0], second[0])
+    top = max(first[1], second[1])
+    right = min(first[2], second[2])
+    bottom = min(first[3], second[3])
+    inner = max(0, right - left) * max(0, bottom - top)
+    if inner == 0:
+        return 0.0
+    first_area = (first[2] - first[0]) * (first[3] - first[1])
+    second_area = (second[2] - second[0]) * (second[3] - second[1])
+    share = inner / (first_area + second_area - inner)
+    return share
 
 
 def _looks_like_person(width: int, height: int, min_height: int, min_ratio: float) -> bool:

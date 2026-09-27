@@ -15,10 +15,11 @@ from typing import Protocol
 import numpy as np
 
 from camera_watch.adapters.clip_encoder import ClipEncoder
-from camera_watch.adapters.motion_regions import crop_region
+from camera_watch.adapters.motion_regions import crop_head, crop_region
 from camera_watch.entity import (
     ABSENT,
     FRAME_SCOPE,
+    HEAD_SCOPE,
     MOTION_SOURCE,
     PERSON_SCOPE,
     PRESENT,
@@ -42,6 +43,9 @@ logger = logging.getLogger(__name__)
 # в сотую долю косинуса превращается в неразличимые 50/50.
 LOGIT_SCALE = 100.0
 DEFAULT_PERSON_PADDING = 30
+# Ниже этой высоты вырезки судить о каске нельзя: на съёмке с дрона голова рабочего
+# занимает сорок пикселей, и модель отмечала каску отсутствующей у всех подряд.
+MIN_HEAD_PIXELS = 70
 ROUND_DIGITS = 4
 
 
@@ -71,18 +75,29 @@ class SafetyAssessmentService:
         return ready
 
     def assess(
-        self, frames: list[np.ndarray], people_source: str = MOTION_SOURCE
+        self, frames: list[np.ndarray], people_source: str = ""
     ) -> tuple[tuple[PersonRegion, ...], tuple[SafetyFinding, ...]]:
-        """Возвращает найденных людей и находки по всем проверкам."""
+        """Возвращает найденных людей и находки по всем проверкам.
+
+        Способ поиска людей не задан — берётся единственный имеющийся: так разбор
+        присланных фотографий не обязан знать про камеры и их настройки.
+        """
         if not frames or not self.is_ready():
             return (), ()
+        people_source = people_source or self._only_finder()
         vectors = self._encoder.embed_phrases(self._all_phrases())
         current = frames[-1]
         findings = list(self._assess_frame(current, vectors))
         regions = self._find_people(frames, people_source)
         for region in regions:
             findings.extend(self._assess_region(current, region, vectors))
+            findings.extend(self._assess_head(current, region, vectors))
         return regions, tuple(findings)
+
+    def _only_finder(self) -> str:
+        """Единственный настроенный способ поиска людей."""
+        names = sorted(self._region_finders)
+        return names[0] if len(names) == 1 else MOTION_SOURCE
 
     def _find_people(self, frames: list[np.ndarray], people_source: str) -> tuple[PersonRegion, ...]:
         """Ищет людей тем способом, который задан камере."""
@@ -111,6 +126,20 @@ class SafetyAssessmentService:
             return []
         piece = crop_region(frame, region, self._person_padding)
         if piece.size == 0:
+            return []
+        vector = self._encoder.embed_image(piece)
+        findings = [score_check(check, vector, vectors, region.box) for check in checks]
+        return findings
+
+    def _assess_head(
+        self, frame: np.ndarray, region: PersonRegion, vectors: dict[str, np.ndarray]
+    ) -> list[SafetyFinding]:
+        """Проверки, которые смотрят на голову человека."""
+        checks = [item for item in self._checks if item.scope == HEAD_SCOPE]
+        if not checks:
+            return []
+        piece = crop_head(frame, region)
+        if piece.size == 0 or piece.shape[0] < MIN_HEAD_PIXELS:
             return []
         vector = self._encoder.embed_image(piece)
         findings = [score_check(check, vector, vectors, region.box) for check in checks]

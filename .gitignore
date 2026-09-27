@@ -38,3 +38,6 @@ data/runs/
 data/cameras/
 # Векторы фраз CLIP — кеш, считается заново за секунды
 data/cache/clip_phrases/
+
+# Материал для проверки СИЗ: фото и видео крупным планом
+data/ppe_demo/

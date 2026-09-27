@@ -5,7 +5,7 @@ from datetime import date
 from pathlib import Path
 
 from camera_watch.adapters.camera_registry_reader import CameraRegistryReader, SafetyChecksReader
-from camera_watch.entity import PERSON_SCOPE
+from camera_watch.entity import HEAD_SCOPE, PERSON_SCOPE
 from ingest_routes import _clear_queue, _collect_photos, _queue, read_plan, stage_for
 
 PHOTO_BYTES = b"\xff\xd8\xff\xe0 fake jpeg"
@@ -149,7 +149,7 @@ def test_проверки_охраны_труда_читаются_с_обоим
     # Assert
     assert checks
     assert all(check.strict_threshold > check.threshold for check in checks)
-    assert all(check.scope == PERSON_SCOPE for check in checks)
+    assert {check.scope for check in checks} == {HEAD_SCOPE, PERSON_SCOPE}
     assert all(check.measured_on for check in checks)
 
 
