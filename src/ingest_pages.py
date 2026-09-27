@@ -2,7 +2,7 @@
 
 from html import escape
 
-from web_pages import STYLE, render_header
+from page_shell import STYLE, render_header
 
 INGEST_URL = "/ingest"
 PAGE_TEMPLATE = """<!DOCTYPE html>

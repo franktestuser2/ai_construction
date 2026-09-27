@@ -4,7 +4,7 @@ from datetime import datetime
 from html import escape
 
 from camera_watch.entity import Camera, CameraState, CapturedFrame, SafetyCheck, SafetyFinding
-from web_pages import STYLE, render_header
+from page_shell import STYLE, render_header
 
 CAMERAS_URL = "/cameras"
 SAFETY_URL = "/safety"

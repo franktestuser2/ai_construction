@@ -20,7 +20,7 @@ from PIL import Image
 from config import Settings
 from site_monitoring.adapters.shift_timeline_reader import ShiftTimelineReader
 from site_monitoring.services.plan_fact_report import build_report
-from web_pages import render_stand_nav
+from page_shell import render_stand_nav
 
 logger = logging.getLogger(__name__)
 
