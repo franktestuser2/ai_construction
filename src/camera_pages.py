@@ -12,8 +12,6 @@ SAFETY_URL = "/safety"
 TIME_FORMAT = "%d.%m.%Y %H:%M"
 SHORT_TIME_FORMAT = "%H:%M"
 NEVER = "ещё не снимали"
-# Три камеры, три кадра в час, восьмичасовая смена.
-POOL_LIMIT = 72
 # Размер кадра по умолчанию, если у камеры его не спросить.
 DEFAULT_SIZE = (1920, 1080)
 PAGE_STYLE = """
@@ -77,11 +75,12 @@ def render_cameras(
     states: tuple[CameraState, ...],
     pool: list[tuple[Camera, CapturedFrame]],
     keep_hours: int,
+    pool_limit: int,
 ) -> str:
     """Страница со всеми камерами: картинка онлайн, состояние съёмки и пул снятого."""
     cards = "".join(_camera_card(state) for state in states)
     body = f'<div class="grid">{cards}</div>' if states else _empty_panel()
-    body += _pool_panel(pool, keep_hours) + render_scheme() + render_handoff()
+    body += _pool_panel(pool, keep_hours, pool_limit) + render_scheme() + render_handoff()
     page = PAGE_TEMPLATE.format(
         title="Камеры площадки",
         style=STYLE,
@@ -125,7 +124,7 @@ def render_camera(
     return page
 
 
-def _pool_panel(pool: list[tuple[Camera, CapturedFrame]], keep_hours: int) -> str:
+def _pool_panel(pool: list[tuple[Camera, CapturedFrame]], keep_hours: int, limit: int) -> str:
     """Пул снятых кадров объекта: миниатюры с камерой и временем съёмки.
 
     Пул показывается миниатюрами, а не снимками: за смену их набирается несколько
@@ -140,9 +139,10 @@ def _pool_panel(pool: list[tuple[Camera, CapturedFrame]], keep_hours: int) -> st
     panel = f"""<div class="panel"><h2>Пул снимков объекта · {len(pool)}</h2>
 <p class="note">Отсюда основной сервис берёт снимки на сверку с календарным планом.
 У каждого кадра известны камера и время съёмки — больше ему ничего не нужно.
-Хранится <b>{keep_hours} ч</b> — смена демонстрационного режима: три камеры по три кадра
-в час дают не больше {POOL_LIMIT} снимков, и пул целиком помещается сюда миниатюрами.
-В работе срок задаётся настройкой и зависит от того, как часто идёт разбор.</p>
+Пул ограничен с двух сторон: <b>{keep_hours} ч</b> — смена демонстрационного режима — и
+<b>{limit} снимков</b>, по числу съёмок каждой камеры за эту смену. Второй потолок нужен
+из-за съёмки вне расписания: кнопка «Снять кадр» добавляет кадры сверх периода, и одним
+сроком пул в обещанных размерах не удержать.</p>
 <div class="pool">{tiles}</div></div>"""
     return panel
 

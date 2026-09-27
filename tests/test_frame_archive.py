@@ -13,6 +13,7 @@ from site_monitoring.adapters.photo_timestamp_reader import read_capture_time
 CAMERA_ID = "gate"
 CAPTURED_AT = datetime(2026, 9, 27, 9, 20, 0)
 NOTE = "Камера 1 — КПП"
+KEEP_COUNT = 24
 
 
 def _frame() -> np.ndarray:
@@ -119,7 +120,7 @@ def test_кадры_старше_срока_хранения_убираются(
     archive.append(CapturedFrame(CAMERA_ID, fresh_at, fresh_name, source_second=0.0))
 
     # Act
-    removed = archive.prune(CAMERA_ID, datetime(2026, 9, 27, 0, 0))
+    removed = archive.prune(CAMERA_ID, datetime(2026, 9, 27, 0, 0), KEEP_COUNT)
 
     # Assert
     assert removed == 1
@@ -140,7 +141,7 @@ def test_вместе_с_кадром_уходит_его_отрезок_зап�
     archive.append(frame)
 
     # Act
-    archive.prune(CAMERA_ID, datetime(2026, 9, 27, 0, 0))
+    archive.prune(CAMERA_ID, datetime(2026, 9, 27, 0, 0), KEEP_COUNT)
 
     # Assert
     assert not clip.exists()
@@ -153,8 +154,25 @@ def test_свежие_кадры_уборка_не_трогает(tmp_path: Path
     archive.append(CapturedFrame(CAMERA_ID, CAPTURED_AT, name, source_second=0.0))
 
     # Act
-    removed = archive.prune(CAMERA_ID, CAPTURED_AT)
+    removed = archive.prune(CAMERA_ID, CAPTURED_AT, KEEP_COUNT)
 
     # Assert
     assert removed == 0
     assert len(archive.list_frames(CAMERA_ID)) == 1
+
+
+def test_кадры_сверх_числа_убираются_начиная_со_старых(tmp_path: Path) -> None:
+    # Arrange: пять кадров подряд, а держать велено три
+    archive = FrameArchive(tmp_path)
+    stamps = [datetime(2026, 9, 27, 9, minute) for minute in (0, 20, 40, 45, 50)]
+    for stamp in stamps:
+        name = archive.save_photo(CAMERA_ID, _frame(), stamp, NOTE)
+        archive.append(CapturedFrame(CAMERA_ID, stamp, name, source_second=0.0))
+
+    # Act
+    removed = archive.prune(CAMERA_ID, datetime(2026, 9, 27, 0, 0), keep_count=3)
+
+    # Assert
+    kept = archive.list_frames(CAMERA_ID)
+    assert removed == 2
+    assert [frame.captured_at for frame in kept] == sorted(stamps[2:], reverse=True)

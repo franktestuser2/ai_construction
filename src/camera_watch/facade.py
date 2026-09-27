@@ -37,6 +37,7 @@ logger = logging.getLogger(__name__)
 BACKGROUND_FRAMES = 12
 BACKGROUND_STEP = 2
 EVENT_CLIP_SECONDS = 6.0
+MINUTES_IN_HOUR = 60
 NO_SOURCE_NOTE = "Файл камеры не найден"
 NO_FRAME_NOTE = "Кадр не прочитан"
 NO_SAFETY_NOTE = "Проверка охраны труда выключена для этой камеры"
@@ -151,10 +152,25 @@ class CameraWatchFacade:
                 outcomes.append(outcome)
         return outcomes
 
-    def prune_archives(self, keep_after: datetime) -> int:
-        """Убирает по всем камерам кадры старше срока хранения."""
-        removed = sum(self._archive.prune(camera.camera_id, keep_after) for camera in self.cameras())
+    def prune_archives(self, keep_after: datetime, keep_hours: int) -> int:
+        """Убирает по всем камерам кадры сверх срока хранения и сверх их числа.
+
+        Сколько кадров держать, считается по расписанию самой камеры: за смену она
+        снимает ровно столько, сколько укладывается в её период съёмки.
+        """
+        removed = NOTHING
+        for camera in self.cameras():
+            keep_count = keep_hours * MINUTES_IN_HOUR // max(camera.capture_period_minutes, 1)
+            removed += self._archive.prune(camera.camera_id, keep_after, keep_count)
         return removed
+
+    def pool_limit(self, keep_hours: int) -> int:
+        """Сколько кадров всего может быть в пуле объекта."""
+        limit = sum(
+            keep_hours * MINUTES_IN_HOUR // max(camera.capture_period_minutes, 1)
+            for camera in self.cameras()
+        )
+        return limit
 
     def next_capture(self, camera: Camera, moment: datetime) -> datetime:
         """Когда камера снимет следующий кадр."""

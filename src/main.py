@@ -95,7 +95,7 @@ def _capture_loop() -> None:
         _analyse_finished_shift(datetime.now())
         # Снятое живёт ограниченный срок: без уборки архив растёт без предела.
         keep_after = datetime.now() - timedelta(hours=settings.archive_hours)
-        watch.prune_archives(keep_after)
+        watch.prune_archives(keep_after, settings.archive_hours)
         prune_queue(settings.camera_inbox_path, keep_after)
 
 

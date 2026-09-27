@@ -135,27 +135,32 @@ class FrameArchive:
         self._write_index(camera_id, records)
         return touched
 
-    def prune(self, camera_id: str, keep_after: datetime) -> int:
-        """Убирает кадры старше заданного времени и возвращает, сколько их было.
+    def prune(self, camera_id: str, keep_after: datetime, keep_count: int) -> int:
+        """Убирает лишние кадры камеры и возвращает, сколько их было.
 
-        Снимок с камеры нужен ровно до тех пор, пока его не разобрали и не сверили
-        с планом; дальше это просто занятое место. Вместе со снимком уходит и отрезок
-        записи, снятый к нему: доказательство без кадра бессмысленно.
+        Потолка два, и нужны оба. По сроку: снимок нужен, пока его не разобрали и не
+        сверили с планом, дальше это занятое место. По числу: съёмка бывает и вне
+        расписания — оператор нажал «снять кадр», — и одним сроком пул в обещанных
+        размерах не удержать.
+
+        Вместе со снимком уходит и отрезок записи, снятый к нему: доказательство без
+        кадра бессмысленно.
         """
         records = self._read_index(camera_id)
-        kept: list[dict[str, object]] = []
-        removed = NOTHING
-        for record in records:
-            stamp = datetime.strptime(str(record["captured_at"]), TIME_FORMAT)
-            if stamp >= keep_after:
-                kept.append(record)
-                continue
+        fresh = [
+            record
+            for record in records
+            if datetime.strptime(str(record["captured_at"]), TIME_FORMAT) >= keep_after
+        ]
+        fresh.sort(key=lambda record: str(record["captured_at"]), reverse=True)
+        kept = fresh[:keep_count]
+        extra = [record for record in records if record not in kept]
+        for record in extra:
             self._remove_files(camera_id, record)
-            removed += 1
-        if removed:
-            self._write_index(camera_id, kept)
-            logger.info("Камера %s: убрано кадров старше срока хранения: %d", camera_id, removed)
-        return removed
+        if extra:
+            self._write_index(camera_id, list(reversed(kept)))
+            logger.info("Камера %s: убрано лишних кадров %d", camera_id, len(extra))
+        return len(extra)
 
     def _remove_files(self, camera_id: str, record: dict[str, object]) -> None:
         """Удаляет файлы одного кадра: сам снимок и отрезок записи к нему."""
