@@ -48,8 +48,8 @@ PAGE_STYLE = """
 .badge{font-size:12px;font-weight:600;padding:2px 9px;border-radius:999px}
 .badge.sure{background:var(--bad-bg);color:var(--bad)}
 .badge.maybe{background:#fdf1de;color:#b26a00}
-.pill.live{background:var(--bad-bg);color:var(--bad)}
-.pill.rec{background:var(--bg);color:var(--muted);border:1px solid var(--line)}
+.pill.stream{background:var(--bad-bg);color:var(--bad)}
+.pill.recorded{background:var(--bg);color:var(--muted);border:1px solid var(--line)}
 .measure{background:var(--bg);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;
          padding:10px 12px;margin-top:10px;font-size:13px;color:var(--muted)}
 .pool{display:grid;grid-template-columns:repeat(auto-fill,minmax(122px,1fr));gap:8px;margin-top:12px}
@@ -88,10 +88,12 @@ def render_cameras(
         page_style=PAGE_STYLE,
         scheme_style=SCHEME_STYLE,
         header=render_header(CAMERAS_URL),
-        heading="Камеры площадки",
-        lead="Каждая камера снимает кадр по расписанию, хранит его сутки и сразу отдаёт "
-        "основному сервису — оттуда берутся снимки для сверки с календарным планом. "
-        "По клику открывается живой просмотр и весь архив съёмки.",
+        heading="Камеры объекта",
+        lead="Страница показывает, откуда основной сервис берёт снимки, когда их не "
+        "загружают руками. Камеры объекта снимают кадр раз в двадцать минут, складывают "
+        "его в общий пул и ждут разбора по календарному плану. Сделано ради "
+        "масштабирования: камер на объекте может быть сколько угодно, и логика от их "
+        "числа не меняется — схема внизу страницы.",
         body=body,
     )
     return page
@@ -138,8 +140,9 @@ def _pool_panel(pool: list[tuple[Camera, CapturedFrame]], keep_hours: int) -> st
     panel = f"""<div class="panel"><h2>Пул снимков объекта · {len(pool)}</h2>
 <p class="note">Отсюда основной сервис берёт снимки на сверку с календарным планом.
 У каждого кадра известны камера и время съёмки — больше ему ничего не нужно.
-Хранится <b>{keep_hours} ч</b> — рабочая смена: три камеры по три кадра в час дают
-не больше {POOL_LIMIT} снимков, и пул целиком помещается сюда миниатюрами.</p>
+Хранится <b>{keep_hours} ч</b> — смена демонстрационного режима: три камеры по три кадра
+в час дают не больше {POOL_LIMIT} снимков, и пул целиком помещается сюда миниатюрами.
+В работе срок задаётся настройкой и зависит от того, как часто идёт разбор.</p>
 <div class="pool">{tiles}</div></div>"""
     return panel
 
@@ -165,9 +168,9 @@ def _camera_card(state: CameraState) -> str:
         else '<span class="pill ok">отметок нет</span>'
     )
     kind = (
-        '<span class="pill live">прямая трансляция</span>'
+        '<span class="pill stream">прямая трансляция</span>'
         if camera.is_live
-        else '<span class="pill rec">демонстрационный ролик</span>'
+        else '<span class="pill recorded">видеофайл</span>'
     )
     card = f"""<div class="cam">
   <a class="live" href="/cameras/{camera.camera_id}"><span class="onair"><i></i>СМОТРЕТЬ ОНЛАЙН</span>
@@ -177,8 +180,7 @@ def _camera_card(state: CameraState) -> str:
     <p class="place">{escape(camera.place)}</p>
     {kind} {violations}
     <div class="meta"><span>снимок раз в <b>{camera.capture_period_minutes} мин</b></span>
-      <span>в архиве <b>{state.frames_stored}</b></span>
-      <span>не отправлено <b>{state.unsent_frames}</b></span></div>
+      <span>в архиве <b>{state.frames_stored}</b></span></div>
     <div class="meta"><span>последняя съёмка: <b>{escape(last)}</b></span></div>
     {_camera_actions(camera.camera_id)}
   </div>
@@ -232,8 +234,8 @@ def _archive_panel(
     panel = f"""<div class="panel"><h2>Архив съёмки · {len(frames)} кадров</h2>
 <p class="note">Снимки хранятся с датой съёмки в метаданных: основной сервис разносит их
 по этапам плана именно по ней. К отметке охраны труда пишется отрезок записи.
-Срок хранения — <b>{keep_hours} ч</b>: кадр нужен, пока его не разобрали и не сверили
-с планом, дальше он только занимает место.</p>
+Срок хранения — <b>{keep_hours} ч</b>, рабочая смена демонстрации: кадр нужен, пока его
+не разобрали и не сверили с планом, дальше он только занимает место.</p>
 {rows}</div>"""
     return panel
 

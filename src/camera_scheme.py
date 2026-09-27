@@ -40,9 +40,9 @@ SCHEME_SVG = """<svg class="scheme" viewBox="0 0 980 330" role="img"
   </g>
   <g class="sbox"><rect x="524" y="88" width="190" height="82" rx="11"/></g>
   <g class="stext">
-    <text x="619" y="114">Разбор по камерам</text>
-    <text x="619" y="134" class="dim">техника этапа,</text>
-    <text x="619" y="152" class="dim">работа между кадрами</text>
+    <text x="619" y="118">Определение работы</text>
+    <text x="619" y="140">по каждой камере</text>
+    <text x="619" y="158" class="dim">отдельно</text>
   </g>
   <g class="sarrow"><path d="M718 129 L768 129" marker-end="url(#ar)"/></g>
   <g class="sbox ok"><rect x="772" y="88" width="200" height="82" rx="11"/></g>
@@ -56,6 +56,12 @@ SCHEME_SVG = """<svg class="scheme" viewBox="0 0 980 330" role="img"
   <g class="stext">
     <text x="748" y="244">Девять отрезков смены → день по графику или отставание</text>
     <text x="748" y="264" class="dim">отрезок невидим, только если площадку не видит ни одна камера</text>
+  </g>
+  <g class="sarrow"><path d="M350 164 L350 214" marker-end="url(#ar)"/></g>
+  <g class="sbox store"><rect x="8" y="218" width="484" height="62" rx="11"/></g>
+  <g class="stext">
+    <text x="250" y="242">Хранилище</text>
+    <text x="250" y="262" class="dim">PostgreSQL: камера, время съёмки, находки · кадры файлами</text>
   </g>
 </svg>"""
 
@@ -76,6 +82,11 @@ def render_scheme() -> str:
       Достаточно одной видящей — и отрезок разбирается по ней, а не уходит на ручную проверку.</li>
   <li><b>Вид работ не выбирается руками.</b> У снимка есть дата съёмки, у объекта —
       календарный план; этап на эту дату и задаёт, какая техника должна быть на площадке.</li>
+  <li><b>Где это хранится при масштабировании.</b> Сведения о кадрах и результаты разбора —
+      в PostgreSQL: камера, объект, время съёмки, находки моделей, вердикт по отрезку.
+      Сами снимки остаются файлами: в базе им делать нечего, в ней лежит путь и контрольная
+      сумма. Сейчас, в демонстрации, и то и другое лежит на диске сервиса — снимки файлами,
+      опись рядом в JSON.</li>
 </ul></div>"""
     return panel
 
@@ -98,6 +109,7 @@ SCHEME_STYLE = """
 .scheme .sbox.accent rect{stroke:var(--extra);stroke-width:2}
 .scheme .sbox.plan rect{stroke:var(--accent);stroke-width:2}
 .scheme .sbox.ok rect{stroke:var(--ok);stroke-width:2}
+.scheme .sbox.store rect{stroke:var(--line);stroke-dasharray:6 4}
 .scheme .stext text{fill:var(--ink);font-size:14px;font-weight:600;text-anchor:middle}
 .scheme .stext text.dim{fill:var(--muted);font-size:12px;font-weight:400}
 .scheme .sarrow{color:var(--muted)}
