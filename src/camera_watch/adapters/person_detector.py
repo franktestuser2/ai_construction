@@ -29,10 +29,13 @@ MIN_PERSON_HEIGHT = 80
 MIN_WIDTH_TO_HEIGHT = 0.25
 COLOR_SCALE = 255.0
 MAX_REGIONS = 12
-# Кадр шире этого детектор разбирает по частям. Причина в самой модели: она сжимает вход
-# до 800 пикселей по короткой стороне, и на съёмке с дрона рабочий ростом в полтораста
-# пикселей превращается в полсотни — ниже порога, по которому мы вообще беремся судить.
-TILE_TRIGGER_WIDTH = 2000
+# Разбор по частям включается не по размеру кадра, а по тому, что на нём нашлось: если
+# самый крупный человек мельче этого роста, кадр прогоняется ещё раз по частям. Причина
+# в самой модели — она сжимает вход до 800 пикселей по короткой стороне, и на съёмке
+# с дрона рабочий ростом в полтораста пикселей превращается в полсотни. На крупных планах
+# части не нужны и вредны: они плодят находки на обрывках фигур.
+TILE_TRIGGER_WIDTH = 1500
+SMALL_PERSON_HEIGHT = 220
 TILE_SIDE = 1100
 TILE_OVERLAP = 0.2
 SAME_BOX_IOU = 0.45
@@ -65,10 +68,14 @@ class PersonDetector:
 
     def _detect(self, frame: np.ndarray) -> list[tuple[int, int, int, int]]:
         """Прогоняет кадр через детектор и оставляет людей подходящего роста."""
-        if frame.shape[1] > TILE_TRIGGER_WIDTH:
-            return self._detect_by_tiles(frame)
         boxes = self._detect_piece(frame)
-        return boxes
+        if frame.shape[1] <= TILE_TRIGGER_WIDTH:
+            return boxes
+        tallest = max((bottom - top for _, top, _, bottom in boxes), default=0)
+        if tallest >= SMALL_PERSON_HEIGHT:
+            return boxes
+        found = self._detect_by_tiles(frame)
+        return found
 
     def _detect_piece(self, piece: np.ndarray) -> list[tuple[int, int, int, int]]:
         """Находит людей на одном изображении."""

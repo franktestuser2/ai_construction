@@ -19,6 +19,7 @@ import numpy as np
 
 from camera_watch.entity import HEAD_SCOPE, PRESENT, UNCLEAR, PersonRegion, SafetyFinding
 from camera_watch.services.safety_assessment import SafetyAssessmentService
+from ppe_video import VideoAnnotator, VideoSummary
 from page_shell import STYLE, render_header
 
 logger = logging.getLogger(__name__)
@@ -33,6 +34,16 @@ FRAMES_DIR_NAME = "frames"
 # Страница отдаётся сервисом по своему адресу, поэтому ссылки на кадры абсолютные:
 # относительные уходили бы на уровень выше и давали пустые рамки без картинок.
 FRAMES_URL = "/safety/ppe/frames"
+VIDEOS_DIR_NAME = "videos"
+VIDEOS_URL = "/safety/ppe/videos"
+PHOTOS_KEY = "фотографии"
+VIDEOS_KEY = "ролики"
+FILE_KEY = "файл"
+NOTE_KEY = "подпись"
+SECONDS_KEY = "секунд"
+EVERY_KEY = "разбор_каждые"
+DEFAULT_SECONDS = 8.0
+DEFAULT_EVERY = 1.5
 PAGE_NAME = "index.html"
 SAFETY_URL = "/safety"
 NOTHING = 0
@@ -64,65 +75,64 @@ class FrameResult:
 
 
 class PpeReportBuilder:
-    """Разбирает папку с фотографиями и роликами и собирает по ним страницу."""
+    """Разбирает отобранный материал и собирает по нему страницу."""
 
     def __init__(
         self,
         assessment: SafetyAssessmentService,
+        annotator: VideoAnnotator,
         source_dir: Path,
         output_dir: Path,
-        video_step_seconds: float,
     ) -> None:
         self._assessment = assessment
+        self._annotator = annotator
         self._source_dir = source_dir
         self._output_dir = output_dir
-        self._video_step = video_step_seconds
 
-    def build(self) -> tuple[FrameResult, ...]:
-        """Разбирает весь материал и пишет страницу."""
+    def build(self, selection: dict[str, object]) -> tuple[tuple[FrameResult, ...], tuple[tuple[VideoSummary, str], ...]]:
+        """Размечает ролики, разбирает фотографии и пишет страницу."""
         frames_dir = self._output_dir / FRAMES_DIR_NAME
         frames_dir.mkdir(parents=True, exist_ok=True)
-        results: list[FrameResult] = []
-        for path in sorted(self._source_dir.iterdir()):
-            suffix = path.suffix.lower()
-            if suffix in PHOTO_SUFFIXES:
-                results.append(self._assess_photo(path, frames_dir))
-            elif suffix in VIDEO_SUFFIXES:
-                results.extend(self._assess_video(path, frames_dir))
-        page = render_ppe_page(tuple(results), self._video_step)
+        videos = self._annotate_videos(selection.get(VIDEOS_KEY) or [])  # type: ignore[arg-type]
+        photos = self._assess_photos(selection.get(PHOTOS_KEY) or [], frames_dir)  # type: ignore[arg-type]
+        page = render_ppe_page(photos, videos)
         (self._output_dir / PAGE_NAME).write_text(page, encoding="utf-8")
-        logger.info("Страница проверки СИЗ собрана: кадров %d", len(results))
+        logger.info("Страница проверки СИЗ собрана: роликов %d, фотографий %d", len(videos), len(photos))
+        return photos, videos
+
+    def _annotate_videos(self, items: list[dict[str, object]]) -> tuple[tuple[VideoSummary, str], ...]:
+        """Размечает каждый ролик из отбора."""
+        videos_dir = self._output_dir / VIDEOS_DIR_NAME
+        videos_dir.mkdir(parents=True, exist_ok=True)
+        marked = []
+        for item in items:
+            name = str(item[FILE_KEY])
+            target = videos_dir / f"{Path(name).stem}.webm"
+            summary = self._annotator.annotate(
+                self._source_dir / name,
+                target,
+                max_seconds=float(item.get(SECONDS_KEY, DEFAULT_SECONDS)),  # type: ignore[arg-type]
+                check_every=float(item.get(EVERY_KEY, DEFAULT_EVERY)),  # type: ignore[arg-type]
+            )
+            marked.append((summary, str(item.get(NOTE_KEY, ""))))
+        return tuple(marked)
+
+    def _assess_photos(
+        self, items: list[dict[str, object]], frames_dir: Path
+    ) -> tuple[FrameResult, ...]:
+        """Разбирает каждую фотографию из отбора."""
+        results = []
+        for item in items:
+            path = self._source_dir / str(item[FILE_KEY])
+            result = self._assess_photo(path, frames_dir, str(item.get(NOTE_KEY, "")))
+            results.append(result)
         return tuple(results)
 
-    def _assess_photo(self, path: Path, frames_dir: Path) -> FrameResult:
+    def _assess_photo(self, path: Path, frames_dir: Path, note: str) -> FrameResult:
         """Разбирает одну фотографию."""
         image = _fit(cv2.imread(str(path)))
-        result = self._assess_image(image, path.name, path.stem, path.name, frames_dir)
+        result = self._assess_image(image, path.name, path.stem, note or path.name, frames_dir)
         return result
-
-    def _assess_video(self, path: Path, frames_dir: Path) -> list[FrameResult]:
-        """Разбирает ролик, беря кадры с заданным шагом."""
-        results = []
-        for number, (second, image) in enumerate(self._sample(path), start=1):
-            name = f"{path.stem}-{number:02d}"
-            title = f"{path.name} · {second:.0f} с"
-            results.append(self._assess_image(_fit(image), path.name, name, title, frames_dir))
-        return results
-
-    def _sample(self, path: Path) -> list[tuple[float, np.ndarray]]:
-        """Берёт из ролика кадры с шагом в заданное число секунд."""
-        capture = cv2.VideoCapture(str(path))
-        fps = capture.get(cv2.CAP_PROP_FPS) or 1.0
-        total = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
-        step = max(int(fps * self._video_step), 1)
-        sampled = []
-        for index in range(0, total, step):
-            capture.set(cv2.CAP_PROP_POS_FRAMES, index)
-            ok, frame = capture.read()
-            if ok:
-                sampled.append((index / fps, frame))
-        capture.release()
-        return sampled
 
     def _assess_image(
         self, image: np.ndarray, source: str, name: str, title: str, frames_dir: Path
@@ -171,6 +181,7 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
 <h1>Каски и жилеты на фото и видео<span class="svc extra">дополнительный сервис</span></h1>
 <p class="sub">{lead}</p>
 {summary}
+{videos}
 {cards}
 </div></body></html>"""
 
@@ -186,43 +197,95 @@ PAGE_STYLE = """
 .card ul{margin:6px 0 0;padding-left:18px;font-size:13px}
 .card li.bad{color:var(--bad)}
 .card .none{font-size:13px;color:var(--ok)}
+.vids{display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:14px;margin-top:12px}
+.vid{background:var(--bg);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.vid video{width:100%;display:block;background:#000}
+.vid .body{padding:11px 13px}
+.vid .body b{font-size:14px}
 """
 
 
-def render_ppe_page(results: tuple[FrameResult, ...], video_step: float) -> str:
-    """Собирает страницу разбора СИЗ."""
-    cards = "".join(_card(item) for item in results)
+def render_ppe_page(
+    photos: tuple[FrameResult, ...], videos: tuple[tuple[VideoSummary, str], ...]
+) -> str:
+    """Собирает страницу разбора СИЗ: сначала размеченные ролики, потом фотографии."""
     page = PAGE_TEMPLATE.format(
         style=STYLE,
         page_style=PAGE_STYLE,
         header=render_header(SAFETY_URL),
-        lead="Тот же разбор, что на камерах, но по присланным фотографиям и роликам. "
-        f"Из ролика кадры берутся раз в {video_step:.0f} с и разбираются как обычные снимки: "
-        "ничего особенного для видео в проверке нет.",
-        summary=_summary(results),
-        cards=f'<div class="ppe">{cards}</div>',
+        lead="Один и тот же разбор работает и по фотографии, и по видео. На ролике рамки "
+        "нарисованы прямо на кадрах: красная — отметка нарушения, зелёная — найденный "
+        "человек, у которого каска и жилет на месте.",
+        summary=_summary(photos, videos),
+        videos=_videos_block(videos),
+        cards=_photos_block(photos),
     )
     return page
 
 
-def _summary(results: tuple[FrameResult, ...]) -> str:
+def _videos_block(videos: tuple[tuple[VideoSummary, str], ...]) -> str:
+    """Размеченные ролики проигрывателями."""
+    if not videos:
+        return ""
+    items = "".join(_video_card(summary, note) for summary, note in videos)
+    block = f"""<div class="panel"><h2>Видео с разметкой</h2>
+<p class="note">Разбор идёт не на каждом кадре: детектор людей занимает секунды, а между
+соседними кадрами на стройке ничего не меняется. Находки держатся до следующего разбора,
+поэтому рамки не мигают.</p>
+<div class="vids">{items}</div></div>"""
+    return block
+
+
+def _video_card(summary: VideoSummary, note: str) -> str:
+    """Один проигрыватель с подписью и числами разбора."""
+    card = f"""<div class="vid">
+  <video controls preload="metadata" playsinline
+         src="{VIDEOS_URL}/{summary.output}"></video>
+  <div class="body"><b>{escape(note or summary.source)}</b>
+    <div class="meta"><span>{summary.seconds:.0f} с</span>
+      <span>разборов: <b>{summary.checked}</b></span>
+      <span>людей: <b>{summary.people}</b></span>
+      <span>отметок: <b>{summary.violations}</b></span></div>
+    <p class="note">{escape(summary.source)}</p></div>
+</div>"""
+    return card
+
+
+def _photos_block(photos: tuple[FrameResult, ...]) -> str:
+    """Отобранные фотографии с рамками."""
+    if not photos:
+        return ""
+    cards = "".join(_card(item) for item in photos)
+    block = f"""<div class="panel"><h2>Фотографии</h2>
+<p class="note">Оставлены только те снимки, где отметки проверены глазами. Остальные из
+набора убраны: на них проверка либо не нашла людей, либо ошиблась, и показывать их как
+работу сервиса нечестно.</p>
+<div class="ppe">{cards}</div></div>"""
+    return block
+
+
+def _summary(
+    photos: tuple[FrameResult, ...], videos: tuple[tuple[VideoSummary, str], ...]
+) -> str:
     """Свод по всему разобранному материалу."""
-    people = sum(len(item.people) for item in results)
-    marks = sum(len(item.violations) for item in results)
-    unclear = sum(item.unclear for item in results)
-    sources = len({item.source for item in results})
+    people = sum(len(item.people) for item in photos) + sum(item.people for item, _ in videos)
+    marks = sum(len(item.violations) for item in photos) + sum(item.violations for item, _ in videos)
+    seconds = sum(item.seconds for item, _ in videos)
     panel = f"""<div class="panel"><h2>Что разобрано</h2>
 <div class="kpis">
-  <div class="kpi"><b>{sources}</b><span>файлов</span></div>
-  <div class="kpi"><b>{len(results)}</b><span>кадров</span></div>
+  <div class="kpi"><b>{len(videos)}</b><span>роликов</span></div>
+  <div class="kpi"><b>{seconds:.0f} с</b><span>видео с разметкой</span></div>
+  <div class="kpi"><b>{len(photos)}</b><span>фотографий</span></div>
   <div class="kpi"><b>{people}</b><span>людей найдено</span></div>
   <div class="kpi"><b>{marks}</b><span>отметок</span></div>
-  <div class="kpi"><b>{unclear}</b><span>без ответа</span></div>
 </div>
 <p class="note">Каска проверяется по голове с плечами, жилет — по фигуре целиком: это
 разные вырезки, и мерялись они порознь. Человек ниже 80 пикселей в разбор не идёт вовсе,
 а о каске не судят, пока вырезка головы меньше 70 пикселей: на съёмке с дрона голова
-занимает сорок, и проверка отмечала отсутствие каски у всех подряд.</p></div>"""
+занимает сорок, и проверка отмечала отсутствие каски у всех подряд.</p>
+<p class="note">Замер по размеченным вручную снимкам: каска — полнота 0,82 при точности
+0,69; жилет — полнота 0,80 при точности 0,50. Это отбор кандидатов на просмотр человеком,
+а не протоколирование нарушений.</p></div>"""
     return panel
 
 

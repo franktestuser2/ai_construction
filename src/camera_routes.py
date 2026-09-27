@@ -37,6 +37,7 @@ EVENTS_LIMIT = 60
 PPE_DIR = Path("docs/ppe")
 PPE_PAGE = PPE_DIR / "index.html"
 NO_PPE_MESSAGE = "Разбор СИЗ не собран: запустите scripts/check_ppe.py"
+WEBM_TYPE = "video/webm"
 
 
 def build_camera_router(watch: CameraWatchFacade, keep_hours: int) -> APIRouter:
@@ -129,6 +130,14 @@ def build_camera_router(watch: CameraWatchFacade, keep_hours: int) -> APIRouter:
         if not PPE_PAGE.exists():
             raise HTTPException(status_code=404, detail=NO_PPE_MESSAGE)
         return FileResponse(PPE_PAGE)
+
+    @router.get("/safety/ppe/videos/{name}")
+    def safety_ppe_video(name: str) -> FileResponse:
+        """Размеченный ролик; имя берётся без пути."""
+        target = PPE_DIR / "videos" / Path(name).name
+        if not target.exists():
+            raise HTTPException(status_code=404, detail=NO_PPE_MESSAGE)
+        return FileResponse(target, media_type=WEBM_TYPE)
 
     @router.get("/safety/ppe/frames/{name}")
     def safety_ppe_frame(name: str) -> FileResponse:

@@ -4,10 +4,14 @@
 объекта обзорные — человек занимает в них два десятка пикселей. Этот прогон показывает,
 на каком материале проверка работает, и его же результат идёт на страницу сервиса.
 
-Запуск: python scripts/check_ppe.py [--source data/ppe_demo] [--step 3]
+Материал для показа отобран вручную и перечислен в `config/ppe_demo.json`: оставлены
+только те снимки, где отметки проверены глазами.
+
+Запуск: python scripts/check_ppe.py [--source data/ppe_demo] [--selection config/ppe_demo.json]
 """
 
 import argparse
+import json
 import logging
 import sys
 from pathlib import Path
@@ -21,13 +25,14 @@ from camera_watch.entity import DETECTOR_SOURCE  # noqa: E402
 from camera_watch.services.safety_assessment import SafetyAssessmentService  # noqa: E402
 from config import Settings  # noqa: E402
 from ppe_report import PpeReportBuilder  # noqa: E402
+from ppe_video import VideoAnnotator  # noqa: E402
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger(__name__)
 
 DEFAULT_SOURCE = Path("data/ppe_demo")
 DEFAULT_OUTPUT = Path("docs/ppe")
-DEFAULT_STEP_SECONDS = 3.0
+DEFAULT_SELECTION = Path("config/ppe_demo.json")
 
 
 def build_service(settings: Settings) -> SafetyAssessmentService:
@@ -52,7 +57,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Проверка касок и жилетов")
     parser.add_argument("--source", default=str(DEFAULT_SOURCE))
     parser.add_argument("--output", default=str(DEFAULT_OUTPUT))
-    parser.add_argument("--step", type=float, default=DEFAULT_STEP_SECONDS)
+    parser.add_argument("--selection", default=str(DEFAULT_SELECTION))
     args = parser.parse_args()
 
     settings = Settings()
@@ -60,20 +65,19 @@ def main() -> int:
     if not service.is_ready():
         logger.error("Проверки не настроены или не найдены веса CLIP")
         return 1
+    selection = json.loads(Path(args.selection).read_text(encoding="utf-8"))
     builder = PpeReportBuilder(
         assessment=service,
+        annotator=VideoAnnotator(service),
         source_dir=Path(args.source),
         output_dir=Path(args.output),
-        video_step_seconds=args.step,
     )
-    results = builder.build()
-    people = sum(len(item.people) for item in results)
-    marks = sum(len(item.violations) for item in results)
-    logger.info("Кадров %d, людей %d, отметок %d", len(results), people, marks)
-    for item in results:
-        if item.violations:
-            found = ", ".join(sorted({finding.title for finding in item.violations}))
-            logger.info("  %s: %s", item.title, found)
+    photos, videos = builder.build(selection)
+    logger.info("Роликов %d, фотографий %d", len(videos), len(photos))
+    for summary, _ in videos:
+        logger.info("  %s: людей %d, отметок %d", summary.source, summary.people, summary.violations)
+    for item in photos:
+        logger.info("  %s: людей %d, отметок %d", item.source, len(item.people), len(item.violations))
     return 0
 
 

@@ -41,3 +41,6 @@ data/cache/clip_phrases/
 
 # Материал для проверки СИЗ: фото и видео крупным планом
 data/ppe_demo/
+
+# Размеченные ролики: собираются scripts/check_ppe.py
+docs/ppe/
