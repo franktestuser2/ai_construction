@@ -4,7 +4,7 @@ import json
 import logging
 from pathlib import Path
 
-from camera_watch.entity import MOTION_SOURCE, Camera, SafetyCheck
+from camera_watch.entity import MOTION_SOURCE, PHRASES_MODEL, Camera, SafetyCheck
 
 logger = logging.getLogger(__name__)
 
@@ -85,6 +85,8 @@ def _build_check(item: dict[str, object]) -> SafetyCheck:
         threshold=float(item["threshold"]),  # type: ignore[arg-type]
         strict_threshold=float(item["strict_threshold"]),  # type: ignore[arg-type]
         min_margin=float(item["min_margin"]),  # type: ignore[arg-type]
+        model=str(item.get("model", PHRASES_MODEL)),
+        weights=str(item.get("weights", "")),
         measured_on=str(item.get("measured_on", "")),
     )
     return check

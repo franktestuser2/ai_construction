@@ -22,6 +22,7 @@ from camera_watch.adapters.camera_registry_reader import SafetyChecksReader  # n
 from camera_watch.adapters.clip_encoder import ClipEncoder  # noqa: E402
 from camera_watch.adapters.person_detector import PersonDetector  # noqa: E402
 from camera_watch.entity import DETECTOR_SOURCE  # noqa: E402
+from camera_watch.container import build_classifiers  # noqa: E402
 from camera_watch.services.safety_assessment import SafetyAssessmentService  # noqa: E402
 from config import Settings  # noqa: E402
 from ppe_report import PpeReportBuilder  # noqa: E402
@@ -43,11 +44,13 @@ def build_service(settings: Settings) -> SafetyAssessmentService:
         phrase_cache_dir=settings.clip_phrase_cache_path,
         threads=settings.onnx_threads,
     )
+    checks = reader.read()
     service = SafetyAssessmentService(
         encoder=encoder,
         region_finders={DETECTOR_SOURCE: PersonDetector()},
-        checks=reader.read(),
+        checks=checks,
         person_padding=reader.read_padding(),
+        classifiers=build_classifiers(checks),
     )
     return service
 

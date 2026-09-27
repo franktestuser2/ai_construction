@@ -15,6 +15,8 @@ STREAM_SCHEMES = ("http://", "https://", "rtsp://", "rtmp://")
 PRESENT = "есть"
 ABSENT = "нет"
 UNCLEAR = "не ясно"
+PHRASES_MODEL = "фразы"
+CLASSIFIER_MODEL = "классификатор"
 PERSON_SCOPE = "человек"
 # Каска решается по голове, а не по всей фигуре: на фигуре целиком вырезку забивает
 # спецовка, и модель отвечала «каска есть» даже там, где человек в вязаной шапке.
@@ -85,6 +87,9 @@ class SafetyCheck:
     threshold: float
     strict_threshold: float
     min_margin: float
+    # Чем решается проверка: обученной сетью или сравнением текстовых фраз.
+    model: str = PHRASES_MODEL
+    weights: str = ""
     measured_on: str = ""
 
 

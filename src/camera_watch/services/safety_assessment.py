@@ -16,8 +16,10 @@ import numpy as np
 
 from camera_watch.adapters.clip_encoder import ClipEncoder
 from camera_watch.adapters.motion_regions import crop_head, crop_region
+from camera_watch.adapters.ppe_classifier import PpeClassifier
 from camera_watch.entity import (
     ABSENT,
+    CLASSIFIER_MODEL,
     FRAME_SCOPE,
     HEAD_SCOPE,
     MOTION_SOURCE,
@@ -58,11 +60,13 @@ class SafetyAssessmentService:
         region_finders: dict[str, RegionFinder],
         checks: tuple[SafetyCheck, ...],
         person_padding: int = DEFAULT_PERSON_PADDING,
+        classifiers: dict[str, PpeClassifier] | None = None,
     ) -> None:
         self._encoder = encoder
         self._region_finders = region_finders
         self._checks = checks
         self._person_padding = person_padding
+        self._classifiers = classifiers or {}
 
     @property
     def checks(self) -> tuple[SafetyCheck, ...]:
@@ -70,9 +74,18 @@ class SafetyAssessmentService:
         return self._checks
 
     def is_ready(self) -> bool:
-        """Есть ли чем проверять: без весов модели проверка не запускается."""
-        ready = bool(self._checks) and self._encoder.is_available()
+        """Есть ли чем проверять: без весов проверка не запускается."""
+        if not self._checks:
+            return False
+        ready = all(self._has_model(check) for check in self._checks)
         return ready
+
+    def _has_model(self, check: SafetyCheck) -> bool:
+        """Готова ли модель, которой решается эта проверка."""
+        if check.model == CLASSIFIER_MODEL:
+            classifier = self._classifiers.get(check.key)
+            return classifier is not None and classifier.is_available()
+        return self._encoder.is_available()
 
     def assess(
         self, frames: list[np.ndarray], people_source: str = ""
@@ -85,7 +98,8 @@ class SafetyAssessmentService:
         if not frames or not self.is_ready():
             return (), ()
         people_source = people_source or self._only_finder()
-        vectors = self._encoder.embed_phrases(self._all_phrases())
+        phrases = self._all_phrases()
+        vectors = self._encoder.embed_phrases(phrases) if phrases else {}
         current = frames[-1]
         findings = list(self._assess_frame(current, vectors))
         regions = self._find_people(frames, people_source)
@@ -127,8 +141,7 @@ class SafetyAssessmentService:
         piece = crop_region(frame, region, self._person_padding)
         if piece.size == 0:
             return []
-        vector = self._encoder.embed_image(piece)
-        findings = [score_check(check, vector, vectors, region.box) for check in checks]
+        findings = [self._judge(check, piece, vectors, region.box) for check in checks]
         return findings
 
     def _assess_head(
@@ -141,17 +154,56 @@ class SafetyAssessmentService:
         piece = crop_head(frame, region)
         if piece.size == 0 or piece.shape[0] < MIN_HEAD_PIXELS:
             return []
-        vector = self._encoder.embed_image(piece)
-        findings = [score_check(check, vector, vectors, region.box) for check in checks]
+        findings = [self._judge(check, piece, vectors, region.box) for check in checks]
         return findings
 
+    def _judge(
+        self,
+        check: SafetyCheck,
+        piece: np.ndarray,
+        vectors: dict[str, np.ndarray],
+        box: tuple[int, int, int, int],
+    ) -> SafetyFinding:
+        """Выносит решение по вырезке тем способом, который задан проверке."""
+        if check.model == CLASSIFIER_MODEL:
+            share = self._classifiers[check.key].violation_probability(piece)
+            return score_probability(check, share, box)
+        vector = self._encoder.embed_image(piece)
+        finding = score_check(check, vector, vectors, box)
+        return finding
+
     def _all_phrases(self) -> list[str]:
-        """Все формулировки всех проверок — их векторы считаются один раз."""
+        """Все формулировки проверок, решаемых сравнением фраз."""
         phrases: list[str] = []
         for check in self._checks:
+            if check.model == CLASSIFIER_MODEL:
+                continue
             phrases.extend(check.positive)
             phrases.extend(check.negative)
         return phrases
+
+
+def score_probability(
+    check: SafetyCheck, share: float, box: tuple[int, int, int, int] | None
+) -> SafetyFinding:
+    """Переводит вероятность обученной сети в находку.
+
+    «Не ясно» здесь не бывает: сеть отвечает вероятностью, и отказываться от ответа ей
+    незачем — отказ нужен был сравнению фраз, где малый отрыв означал, что модель
+    формулировки не разделила.
+    """
+    finding = SafetyFinding(
+        check_key=check.key,
+        title=check.title,
+        verdict=PRESENT if share >= check.threshold else ABSENT,
+        confidence=round(share, ROUND_DIGITS),
+        confident=share >= check.strict_threshold,
+        margin=round(share - check.threshold, ROUND_DIGITS),
+        best_positive=check.title,
+        best_negative="",
+        box=box,
+    )
+    return finding
 
 
 def score_check(

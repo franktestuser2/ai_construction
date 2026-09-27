@@ -99,3 +99,32 @@ def test_рамка_области_сохраняется_в_находке() ->
     # Assert
     assert finding.box == BOX
     assert finding.best_positive == POSITIVE
+
+
+def test_решение_обученной_сети_переводится_в_находку() -> None:
+    # Arrange
+    from camera_watch.entity import CLASSIFIER_MODEL
+    from camera_watch.services.safety_assessment import score_probability
+
+    check = SafetyCheck(
+        key="нет_каски",
+        title="Рабочий без защитной каски",
+        scope=PERSON_SCOPE,
+        positive=(),
+        negative=(),
+        threshold=0.5,
+        strict_threshold=0.9,
+        min_margin=0.0,
+        model=CLASSIFIER_MODEL,
+        weights="models/ppe/head.pt",
+    )
+
+    # Act
+    sure = score_probability(check, 0.95, BOX)
+    marked = score_probability(check, 0.61, BOX)
+    clean = score_probability(check, 0.12, BOX)
+
+    # Assert
+    assert (sure.verdict, sure.confident) == (PRESENT, True)
+    assert (marked.verdict, marked.confident) == (PRESENT, False)
+    assert clean.verdict == ABSENT
