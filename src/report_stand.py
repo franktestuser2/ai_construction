@@ -86,6 +86,40 @@ def _rules_work(work_id: str) -> dict[str, object] | None:
     return work
 
 
+# Классы детектора, которых нет ни в одних правилах: в правила они не попали намеренно
+# (Trailer, Motor grader и Roller обучены плохо), но на кадре встречаются и показываются
+# как техника не по этапу. По-английски это читается как сбой, а не как находка.
+EXTRA_MACHINE_NAMES = {
+    "Bulldozer": "Бульдозер",
+    "Cleaning equipment": "Уборочная машина",
+    "Forklift Standart": "Вилочный погрузчик",
+    "Gazelle": "Малотоннажный фургон",
+    "Motor grader": "Автогрейдер",
+    "Roller": "Каток",
+    "Tanker": "Автоцистерна",
+    "Trailer": "Прицеп или полуприцеп",
+    "Truck": "Грузовик",
+}
+
+
+def _machine_names() -> dict[str, str]:
+    """Сопоставляет класс детектора русскому названию машины из правил.
+
+    Детектор отдаёт свои английские ярлыки — `Excavator`, `Dump truck`. Показывать их
+    рядом с русскими позициями правил незачем: человек читает «список машин» и не должен
+    догадываться, что `Excavator` и «Экскаватор» это одно и то же. Исходный ярлык
+    остаётся рядом — по нему находку можно проверить.
+    """
+    rules = json.loads(RULES_PATH.read_text(encoding="utf-8"))
+    names: dict[str, str] = dict(EXTRA_MACHINE_NAMES)
+    for work in rules["works"]:
+        for position in work["positions"]:
+            for alternative in position["alternatives"]:
+                for found in alternative.get("detector_classes") or []:
+                    names[found] = alternative["machine_type"]
+    return names
+
+
 def _position_index(work_id: str) -> dict[str, dict[str, object]]:
     """Собирает соответствие «что нашли → какую позицию правил это закрывает».
 
@@ -107,6 +141,21 @@ def _position_index(work_id: str) -> dict[str, dict[str, object]]:
     return index
 
 
+def _position_text(position: dict[str, object]) -> str:
+    """Позиция комплекта словами: чем она закрывается и ведущая ли она.
+
+    Перечень альтернатив дописывается, только если он отличается от названия позиции:
+    позиции названы по работе, а не по классу машины, и «машина для погрузки» сама по себе
+    не говорит, что её закрывает экскаватор. А «самосвал (самосвал)» — пустое повторение.
+    """
+    names = [str(item["machine_type"]).lower() for item in position["alternatives"]]  # type: ignore[index]
+    title = str(position["position"]).lower()
+    lead = LEAD_MARK if position.get("lead") else ""
+    if names == [title]:
+        return f"{title}{lead}"
+    return f"{title} — {' или '.join(names)}{lead}"
+
+
 def _kit_text(work_id: str) -> str:
     """Составляет строку о том, какие машины нужны для производства этих работ."""
     work = _rules_work(work_id)
@@ -114,8 +163,11 @@ def _kit_text(work_id: str) -> str:
         return ""
     if work.get(FACADE_CHECK_KEY):
         return FACADE_KIT_TEXT
+    # Рядом с позицией перечисляется, чем её можно закрыть: позиции названы по работе,
+    # а не по классу машины, и без перечня «машина для погрузки» не говорит о том, что
+    # её закрывает экскаватор.
     machines = [
-        f"{position['position']}{LEAD_MARK if position.get('lead') else ''}"
+        _position_text(position)
         for position in work["positions"]  # type: ignore[index]
         if position["kind"] != WORK_EVIDENCE_KIND
     ]
@@ -182,8 +234,12 @@ class StandBuilder:
         images: dict[str, str] = {}
         for work_id, timeline in sorted(timelines.items()):
             details = self._frame_details(observations, work_id)
+            names = _machine_names()
             for slot in timeline["slots"]:
                 slot["is_counted"] = is_slot_counted(slot)
+                slot["foreign_equipment"] = [
+                    names.get(found, found) for found in slot.get("foreign_equipment") or []
+                ]
                 slot["details"] = details.get(slot["frame_id"])
                 if slot["frame_id"] is not None:
                     path = self._photo_path(work_id, slot["frame_id"])
@@ -221,11 +277,15 @@ class StandBuilder:
             return _facade_details(stored, facade)  # type: ignore[arg-type]
         motions = stored["motions"]  # type: ignore[index]
         roles = _position_index(work_id)
+        names = _machine_names()
         details: dict[str, dict[str, object]] = {}
         for index, item in enumerate(stored["observations"]):  # type: ignore[index]
             motion = motions[index] if index < len(motions) else None
             for unit in item["equipment"]:
-                unit["role"] = roles.get(unit["machine_type"])
+                found = unit["machine_type"]
+                unit["role"] = roles.get(found)
+                unit["detector_class"] = found if found in names else ""
+                unit["machine_type"] = names.get(found, found)
             details[item["frame_id"]] = {"equipment": item["equipment"], "motion": motion}
         return details
 

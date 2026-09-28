@@ -576,7 +576,8 @@ function slotEquipmentHtml(details){
     const label = role
       ? `${esc(role.position)}${role.lead ? ' · ведущая' : ''}<span class="rolekind">${esc(role.kind.replace('_', ' '))}</span>`
       : '<span class="comment">в правилах этапа не участвует</span>';
-    return `<tr class="${role ? '' : 'idle'}"><td>${esc(item.machine_type)}</td>
+    const raw = item.detector_class ? `<span class="comment">${esc(item.detector_class)}</span>` : '';
+    return `<tr class="${role ? '' : 'idle'}"><td>${esc(item.machine_type)}${raw}</td>
       <td><span class="pill ${item.source === 'detector' ? 'det' : 'vlm'}">${item.source === 'detector' ? 'детектор' : 'VLM'}</span></td>
       <td>${esc(item.status)}</td><td>${label}</td></tr>`;
   }).join('');
