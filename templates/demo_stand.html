@@ -618,8 +618,9 @@ function slotMotionHtml(slot, details){
 let slotOpened = false;
 
 function foldHelp(){
-  // Пояснения нужны, пока смотришь таблицу, и мешают, когда смотришь снимок:
-  // по первому открытию отрезка они сворачиваются, дальше их складывает пользователь.
+  // Пояснения нужны, пока смотришь таблицу, и мешают, когда смотришь снимок: по первому
+  // открытию отрезка они сворачиваются, и просмотр с таблицей оказываются рядом. Страницу
+  // при этом не перематываем — иначе возвращаться к таблице пришлось бы руками.
   if(slotOpened){ return; }
   slotOpened = true;
   document.querySelectorAll('details.foldable[open]').forEach(item => item.removeAttribute('open'));
@@ -646,7 +647,6 @@ function openSlot(button){
   draw();
   document.getElementById('sh-viewer').classList.remove('empty');
   foldHelp();
-  document.getElementById('sh-viewer').scrollIntoView({behavior: 'smooth', block: 'start'});
   const stripes = ['equipment','kit','motion'].filter(name => slot['has_' + name]).map(name => STRIPE_TITLES[name]);
   document.getElementById('sh-caption').innerHTML =
     `<h2>${esc(shift.work_id)} · ${slotTime(slot.starts_at)}</h2>
