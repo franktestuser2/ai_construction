@@ -35,6 +35,10 @@ DEFAULT_DETECTOR_WEIGHTS_PATH = Path("models/rt_detr/weights/unpacked/checkpoint
 DEFAULT_FACADE_CELL_WEIGHTS_PATH = Path("models/facade/weights/torchvision/facade_cells.pt")
 DEFAULT_BUILDING_WEIGHTS_PATH = Path("models/facade/weights/torchvision/building.pt")
 DEFAULT_BARRIER_WEIGHTS_PATH = Path("models/facade/weights/torchvision/barrier_resnet18.pt")
+# Доля несовпавших битов хеша, после которой снимок считается снятым с другой сцены.
+# Порог подобран по демонстрационному набору: самый непохожий кадр своей сцены даёт 0,41,
+# самый похожий кадр чужой — 0,44, и 0,425 проходит ровно между ними.
+DEFAULT_SCENE_MISMATCH_THRESHOLD = 0.425
 # Пороги взяты из рабочей конфигурации авторов фасадных моделей, не подобраны нами.
 DEFAULT_FACADE_CELL_THRESHOLD = 0.35
 DEFAULT_BUILDING_THRESHOLD = 0.85
@@ -91,6 +95,7 @@ class Settings(BaseSettings):
     facade_cell_threshold: float = DEFAULT_FACADE_CELL_THRESHOLD
     building_threshold: float = DEFAULT_BUILDING_THRESHOLD
     barrier_threshold: float = DEFAULT_BARRIER_THRESHOLD
+    scene_mismatch_threshold: float = DEFAULT_SCENE_MISMATCH_THRESHOLD
 
     detector_confidence_threshold: float = DEFAULT_DETECTOR_THRESHOLD
     idle_streak_days: int = DEFAULT_IDLE_STREAK_DAYS

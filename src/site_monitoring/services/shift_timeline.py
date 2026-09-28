@@ -14,7 +14,10 @@
 
 Отдельно отмечаются отрезки, по которым фронт работ в кадр не попал: они не
 засчитываются, но и в отставание не пишутся — по требованиям такой участок
-считается вне контроля ИИ и требует ручной проверки.
+считается вне контроля ИИ и требует ручной проверки. Судит об этом модель по самому
+снимку, а сервис отклоняет её жалобу в одном случае: техника этапа найдена и её работа
+между кадрами подтверждена. Раз видно и машину, и её работу, фронт работ в кадре есть.
+Одной техники для этого мало: камера может смотреть машине в корму.
 
 Первый снимок смены сравнивать не с чем, поэтому там хватает двух признаков.
 Слот, на который снимка не пришло, не засчитывается.
@@ -43,6 +46,8 @@ FIRST_SLOT_INDEX = 0
 SECONDS_IN_MINUTE = 60
 # Доли ячеек ниже этого сдвига списываем на шум детектора, а не на работу.
 FACADE_CHANGE_THRESHOLD = 0.05
+# Ракурс сменился: сравнивать такой кадр не с чем, и работа по нему не измеряется.
+SCENE_MISMATCH_REASON = "ракурс не совпадает со сценой смены"
 
 
 def _facade_changed(previous: FacadeReadiness | None, current: FacadeReadiness | None) -> bool:
@@ -81,6 +86,42 @@ def _foreign_equipment(
         if unit.machine_type not in foreign:
             foreign.append(unit.machine_type)
     return tuple(foreign)
+
+
+def _limited_by_scene(scene_mismatch: tuple[bool, ...], place: int | None) -> bool:
+    """Снят ли кадр отрезка не с той сцены, что остальные кадры смены."""
+    if place is None or place >= len(scene_mismatch):
+        return False
+    mismatch = scene_mismatch[place]
+    return mismatch
+
+
+def _is_view_limited(observation: FrameObservation | None, has_equipment: bool, has_motion: bool) -> bool:
+    """Принимается ли жалоба модели на обзор.
+
+    Жалоба отклоняется в одном случае: техника этапа на кадре найдена и сравнение
+    с прошлым кадром показало, что она работает. Раз по снимку удалось увидеть
+    и машину, и её работу, значит фронт работ в кадре и судить по нему можно.
+    Одной техники мало: камера может смотреть машине в корму, и чем та занята,
+    по такому кадру не скажешь.
+    """
+    if observation is None or not observation.limited_view:
+        return False
+    measurable = has_equipment and has_motion
+    limited = not measurable
+    return limited
+
+
+def _limited_reason(observation: FrameObservation | None, off_scene: bool) -> str:
+    """Выбирает объяснение для отрезка вне контроля ИИ.
+
+    Смена ракурса важнее жалобы модели: если кадр пришёл с другого места,
+    все прочие замечания к нему вторичны.
+    """
+    if off_scene:
+        return SCENE_MISMATCH_REASON
+    reason = observation.limited_reason if observation is not None else ""
+    return reason
 
 
 def _count_matched(position: WorkPosition, observation: FrameObservation) -> int:
@@ -135,15 +176,26 @@ class ShiftTimelineService:
         # Комплект — признак всей смены: вторая или третья машина должна появиться
         # хотя бы раз за день, а не в каждом слоте отдельно.
         kit_collected = self._is_kit_collected(rules, observations)
+        has_equipment = self._has_equipment(rules, observation)
+        # Сцена сменилась — значит соседний кадр снят в другом месте, и разницу между
+        # двумя разными местами легко принять за работу. Такой признак не засчитывается.
+        off_scene = _limited_by_scene(frames.scene_mismatch, place)
+        has_motion = motion is not None and motion.has_motion and not off_scene
+        limited = off_scene or _is_view_limited(observation, has_equipment, has_motion)
         slot = ShiftSlot(
             index=index,
             starts_at=self._slot_start(frames, index),
             frame_id=observation.frame_id if observation is not None else None,
-            has_equipment=self._has_equipment(rules, observation),
-            has_kit=kit_collected and observation is not None,
-            has_motion=motion is not None and motion.has_motion,
+            has_equipment=has_equipment,
+            # Комплект не бывает собран без главной машины: она в него и входит.
+            # Дополнительная машина считается за смену, потому что цикличная техника
+            # в каждый кадр не попадает, но без главной на кадре речи о комплекте нет.
+            has_kit=kit_collected and has_equipment,
+            has_motion=has_motion,
             is_first=index == FIRST_SLOT_INDEX,
-            limited_view=observation is not None and observation.limited_view,
+            limited_view=limited,
+            limited_reason=_limited_reason(observation, off_scene),
+            scene_mismatch=off_scene,
             foreign_equipment=_foreign_equipment(rules, observation),
         )
         return slot
@@ -161,16 +213,21 @@ class ShiftTimelineService:
             else None
         )
         frame_id = frames.frame_ids[place] if place is not None and place < len(frames.frame_ids) else None
+        off_scene = _limited_by_scene(frames.scene_mismatch, place)
         slot = ShiftSlot(
             index=index,
             starts_at=self._slot_start(frames, index),
             frame_id=frame_id,
             has_equipment=readiness is not None,
             has_kit=readiness is not None and readiness.cells_total > NOTHING_FOUND,
-            has_motion=_facade_changed(previous, readiness),
+            # Кадр с другого ракурса сравнивать не с чем: изменение состава ячеек
+            # между двумя разными зданиями ничего не значит.
+            has_motion=_facade_changed(previous, readiness) and not off_scene,
             is_first=index == FIRST_SLOT_INDEX,
             # Здание в кадре не найдено — значит фронт работ в него не попал.
-            limited_view=frame_id is not None and readiness is None,
+            limited_view=off_scene or (frame_id is not None and readiness is None),
+            limited_reason=SCENE_MISMATCH_REASON if off_scene else "",
+            scene_mismatch=off_scene,
         )
         return slot
 
@@ -212,17 +269,38 @@ class ShiftTimelineService:
         rules: WorkEquipmentRules,
         observation: FrameObservation | None,
     ) -> bool:
-        """Проверяет, видна ли на кадре техника этапа — ведущая или любая другая.
+        """Проверяет, видно ли на кадре того, кто делает работу.
 
-        Полоска отвечает на вопрос «техника на площадке есть», а не «есть именно ведущая»:
-        машина из комплекта подтверждает присутствие техники ничуть не хуже. Признак
-        работ в счёт не идёт — это состояние объекта, а не машина.
+        Это главная машина этапа — без экскаватора мусор не грузят, без подачи бетона
+        не бетонируют, — либо бригада на фронте работ там, где работу делают руками.
+        Прочие машины комплекта подтверждают организацию работ и считаются отдельно,
+        за смену. Если ведущей позиции в правилах нет, годится любая машина комплекта.
         """
         if observation is None:
             return False
-        machines = self._machine_positions(rules)
-        found = any(_count_matched(position, observation) > NOTHING_FOUND for position in machines)
+        positions = self._lead_positions(rules) or self._kit_positions(rules)
+        found = any(_count_matched(position, observation) > NOTHING_FOUND for position in positions)
         return found
+
+    def _lead_positions(self, rules: WorkEquipmentRules) -> tuple[WorkPosition, ...]:
+        """Кто делает саму работу: главная машина или бригада на фронте работ.
+
+        Бригада засчитывается наравне с машиной: арматуру вяжут и опалубку ставят
+        люди, и техника при этом может простаивать — работа от этого идти не перестаёт.
+        """
+        positions = tuple(
+            position
+            for position in rules.positions
+            if position.is_lead or position.kind is PositionKind.CREW
+        )
+        return positions
+
+    def _kit_positions(self, rules: WorkEquipmentRules) -> tuple[WorkPosition, ...]:
+        """Все машины комплекта этапа."""
+        positions = tuple(
+            position for position in rules.positions if position.kind is PositionKind.KIT
+        )
+        return positions
 
     def _is_kit_collected(
         self,
@@ -247,16 +325,15 @@ class ShiftTimelineService:
         return positions
 
     def _support_positions(self, rules: WorkEquipmentRules) -> tuple[WorkPosition, ...]:
-        """Вторая и третья машины этапа: всё, кроме ведущей и признака работ.
+        """Машины комплекта кроме главной: без них работа не идёт.
 
-        Берутся и комплект, и сопутствующая техника. В правилах четырёх этапов из семи
-        второй машины в комплекте нет вовсе, она записана сопутствующей, и по одному
-        только комплекту оранжевая полоска не зажглась бы там никогда.
-        Признак работ — состояние самого объекта, а не машина, и в счёт не идёт.
+        Берётся только комплект. Допустимая техника — прицеп, бульдозер, лишний
+        экскаватор — на площадке бывает, отклонением не считается, но и комплект
+        не закрывает: работу делают не они.
         """
         positions = tuple(
             position
             for position in rules.positions
-            if position.kind is not PositionKind.WORK_EVIDENCE and not position.is_lead
+            if position.kind is PositionKind.KIT and not position.is_lead
         )
         return positions

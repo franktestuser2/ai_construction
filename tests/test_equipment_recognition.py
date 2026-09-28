@@ -31,15 +31,21 @@ class _FakeDetector:
 class _FakeVlm:
     """Модель-заглушка: запоминает вопросы и отдаёт заданный ответ."""
 
-    def __init__(self, equipment: tuple[ObservedEquipment, ...], limited_view: bool = False) -> None:
+    def __init__(
+        self,
+        equipment: tuple[ObservedEquipment, ...],
+        limited_view: bool = False,
+        limited_reason: str = "",
+    ) -> None:
         self._equipment = equipment
         self._limited_view = limited_view
+        self._limited_reason = limited_reason
         self.asked: tuple[tuple[str, str], ...] = ()
 
     def recognize(self, image_path: Path, work_name: str, questions: tuple[tuple[str, str], ...]):
         """Сохраняет заданные вопросы и возвращает подготовленный ответ."""
         self.asked = questions
-        return self._equipment, self._limited_view
+        return self._equipment, self._limited_view, self._limited_reason
 
 
 def _detector_find(machine_class: str) -> ObservedEquipment:
@@ -140,7 +146,7 @@ def test_vlm_type_with_question_wording_is_matched() -> None:
     }
 
     # Act
-    equipment, limited_view = parse_vlm_answer(answer, ("Экскаватор", "Самосвал"))
+    equipment, limited_view, _ = parse_vlm_answer(answer, ("Экскаватор", "Самосвал"))
 
     # Assert
     assert len(equipment) == 1
@@ -201,8 +207,8 @@ def test_arbiter_rejects_false_detection(work_rules) -> None:
     assert found.status is EquipmentStatus.WORKING
 
 
-def test_arbiter_mode_asks_vlm_only_about_its_own_types(work_rules) -> None:
-    # Arrange
+def test_при_арбитре_модель_спрашивают_и_про_технику_детектора(work_rules) -> None:
+    # Arrange: детектор нашёл рамку, но вопрос по кадру всё равно должен прозвучать
     candidate = ObservedEquipment(
         machine_type="Excavator",
         source=EquipmentSource.DETECTOR,
@@ -220,4 +226,53 @@ def test_arbiter_mode_asks_vlm_only_about_its_own_types(work_rules) -> None:
 
     # Assert
     asked_types = {machine_type for machine_type, _ in vlm.asked}
-    assert "Экскаватор" not in asked_types
+    assert "Экскаватор" in asked_types
+
+
+def test_отклонённая_рамка_не_отменяет_технику_с_кадра(work_rules) -> None:
+    # Arrange: рамка легла на соседнюю машину, арбитр её отклонил,
+    # но на кадре целиком модель экскаватор видит
+    candidate = ObservedEquipment(
+        machine_type="Excavator",
+        source=EquipmentSource.DETECTOR,
+        status=EquipmentStatus.NOT_APPLICABLE,
+        count=1,
+        confidence=0.07,
+        boxes=((0.39, 0.29, 0.65, 0.66),),
+    )
+    vlm = _FakeVlm((_vlm_find("Экскаватор", EquipmentStatus.WORKING),))
+    arbiter = _FakeArbiter((_arbitration(False, EquipmentStatus.NOT_APPLICABLE, "самосвал"),))
+    service = EquipmentRecognitionService(_FakeDetector((candidate,)), vlm, arbiter)
+
+    # Act
+    observation = service.recognize_frame(FRAME_ID, IMAGE_PATH, OBSERVED_ON, WORK_NAME, work_rules)
+
+    # Assert
+    found = [item for item in observation.equipment if item.machine_type == "Экскаватор"]
+    assert len(found) == 1
+    assert found[0].count == 1
+    assert found[0].source is EquipmentSource.VLM
+
+
+def test_подтверждённая_рамка_отменяет_запасной_ответ(work_rules) -> None:
+    # Arrange: и рамка подтверждена, и модель отвечает «есть» — находка должна остаться одна
+    candidate = ObservedEquipment(
+        machine_type="Excavator",
+        source=EquipmentSource.DETECTOR,
+        status=EquipmentStatus.NOT_APPLICABLE,
+        count=1,
+        confidence=0.09,
+        boxes=((0.1, 0.1, 0.3, 0.3),),
+    )
+    vlm = _FakeVlm((_vlm_find("Экскаватор", EquipmentStatus.WORKING),))
+    arbiter = _FakeArbiter((_arbitration(True, EquipmentStatus.WORKING),))
+    service = EquipmentRecognitionService(_FakeDetector((candidate,)), vlm, arbiter)
+
+    # Act
+    observation = service.recognize_frame(FRAME_ID, IMAGE_PATH, OBSERVED_ON, WORK_NAME, work_rules)
+
+    # Assert
+    excavators = [item for item in observation.equipment
+                  if item.machine_type in ("Экскаватор", "Excavator")]
+    assert len(excavators) == 1
+    assert excavators[0].source is EquipmentSource.DETECTOR

@@ -7,6 +7,7 @@
 """
 
 import logging
+import threading
 from pathlib import Path
 
 import numpy as np
@@ -183,11 +184,23 @@ class FacadeCellDetector:
         self._weights_path = weights_path
         self._confidence_threshold = confidence_threshold
         self._model: FasterRCNN | None = None
+        self._load_lock = threading.Lock()
 
     def load(self) -> None:
-        """Поднимает модель в память один раз на весь прогон."""
+        """Поднимает модель в память один раз на весь прогон.
+
+        Замок нужен из-за параллельного разбора кадров смены: без него каждый
+        поток поднимал в память собственную копию весов, и прогон падал по памяти.
+        """
         if self._model is not None:
             return
+        with self._load_lock:
+            if self._model is not None:
+                return
+            self._load_model()
+
+    def _load_model(self) -> None:
+        """Читает веса и переводит модель в режим предсказания."""
         model = build_faster_rcnn(CELL_CLASS_COUNT)
         state = torch.load(self._weights_path, map_location="cpu", weights_only=True)
         model.load_state_dict(state)
@@ -258,11 +271,23 @@ class BuildingDetector:
         self._weights_path = weights_path
         self._confidence_threshold = confidence_threshold
         self._model: FasterRCNN | None = None
+        self._load_lock = threading.Lock()
 
     def load(self) -> None:
-        """Поднимает модель в память один раз на весь прогон."""
+        """Поднимает модель в память один раз на весь прогон.
+
+        Замок нужен из-за параллельного разбора кадров смены: без него каждый
+        поток поднимал в память собственную копию весов, и прогон падал по памяти.
+        """
         if self._model is not None:
             return
+        with self._load_lock:
+            if self._model is not None:
+                return
+            self._load_model()
+
+    def _load_model(self) -> None:
+        """Читает веса и переводит модель в режим предсказания."""
         model = build_faster_rcnn(BUILDING_CLASS_COUNT)
         state = torch.load(self._weights_path, map_location="cpu", weights_only=True)
         model.load_state_dict(state)

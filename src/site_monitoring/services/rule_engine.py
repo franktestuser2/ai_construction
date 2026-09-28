@@ -4,6 +4,7 @@
 признак работ, затем комплект техники, и только потом сопутствующая техника.
 Комплект проверяется целиком, если за день есть серия снимков; по одному кадру
 в сутки комплект проверить нечем, поэтому гейтит только ведущая позиция.
+
 """
 
 import logging
@@ -33,7 +34,6 @@ NOT_VERIFIED_TEMPLATE = (
     "Позиция комплекта «{position}» не подтверждена: за день один снимок, "
     "цикличная техника в него может не попасть"
 )
-MISSING_ACCOMPANYING_TEMPLATE = "Сопутствующая техника «{position}» не обнаружена"
 IDLE_TEMPLATE = "Ведущая позиция «{position}» на месте, но ни на одном снимке не работает"
 SHORTAGE_DETAIL = "найдено {found} ед. из {required}"
 NOTHING_DETAIL = "не найдена ни на одном снимке"
@@ -133,9 +133,11 @@ class RuleEngineService:
         if position.kind is PositionKind.WORK_EVIDENCE:
             description = MISSING_EVIDENCE_TEMPLATE.format(position=position.position)
             return Deviation(DeviationKind.MISSING_WORK_EVIDENCE, position.position, description)
-        if position.kind is PositionKind.ACCOMPANYING:
-            description = MISSING_ACCOMPANYING_TEMPLATE.format(position=position.position)
-            return Deviation(DeviationKind.MISSING_AUXILIARY, position.position, description)
+        # Сопутствующая техника на то и сопутствующая: она может быть на площадке,
+        # а может не быть, и её отсутствие — не отклонение. Перечень таких машин широк,
+        # иначе каждый кадр тонул бы в замечаниях вида «нет бульдозера».
+        if position.kind in (PositionKind.ACCOMPANYING, PositionKind.CREW):
+            return None
         kit_deviation = self._kit_deviation(position, detail, series)
         return kit_deviation
 

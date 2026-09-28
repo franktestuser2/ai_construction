@@ -3,6 +3,12 @@
 Детектор даёт кандидатов с рамками, арбитр на базе визуально-языковой модели
 проверяет каждую рамку по фрагменту и целому кадру, а типы техники, которых в
 детекторе нет, модель ищет по снимку целиком.
+
+Ответ по снимку целиком спрашивается и про те машины, которые ищет детектор, —
+это резерв на случай его промаха. Детектор берёт крупный передний план и путает
+класс на дальнем: рамку с самосвала он подписывает экскаватором, арбитр её
+справедливо отклоняет, и настоящий экскаватор в глубине кадра пропадает вместе
+с ней. Резерв засчитывается только там, где рамками не подтверждено ничего.
 """
 
 import logging
@@ -25,6 +31,7 @@ logger = logging.getLogger(__name__)
 
 ACTIVITY_QUESTION = "Есть ли такая техника на снимке и работает ли она сейчас?"
 REJECTED_TEMPLATE = "Арбитр отклонил гипотезу детектора: {reasons}"
+NOTHING_FOUND = 0
 
 
 class EquipmentRecognitionService:
@@ -51,18 +58,22 @@ class EquipmentRecognitionService:
         """Разбирает снимок и возвращает перечень найденной техники."""
         detected = self._detector.detect(image_path)
         questions = self._build_questions(rules)
-        recognized, limited_view = self._vlm_client.recognize(image_path, work_name, questions)
+        recognized, limited_view, limited_reason = self._vlm_client.recognize(
+            image_path, work_name, questions
+        )
         if self._arbiter is not None:
             enriched = self._verify_detections(detected, rules, image_path, work_name)
         else:
             statuses = {item.machine_type: item.status for item in recognized}
             enriched = self._apply_statuses(detected, rules, statuses)
         vlm_only = tuple(item for item in recognized if not self._is_detector_type(item.machine_type, rules))
+        fallback = self._fallback_equipment(recognized, enriched, rules)
         observation = FrameObservation(
             frame_id=frame_id,
             observed_on=observed_on,
-            equipment=enriched + vlm_only,
+            equipment=enriched + vlm_only + fallback,
             limited_view=limited_view,
+            limited_reason=limited_reason,
         )
         logger.info("Снимок %s: позиций техники %d", frame_id, len(observation.equipment))
         return observation
@@ -74,8 +85,7 @@ class EquipmentRecognitionService:
             if alternative.source is EquipmentSource.VLM and alternative.vlm_question:
                 questions.append((alternative.machine_type, alternative.vlm_question))
                 continue
-            if self._arbiter is None:
-                questions.append((alternative.machine_type, ACTIVITY_QUESTION))
+            questions.append((alternative.machine_type, ACTIVITY_QUESTION))
         result = tuple(questions)
         return result
 
@@ -147,6 +157,48 @@ class EquipmentRecognitionService:
         if rejected:
             return REJECTED_TEMPLATE.format(reasons=" ".join(rejected))
         return ""
+
+    def _fallback_equipment(
+        self,
+        recognized: tuple[ObservedEquipment, ...],
+        enriched: tuple[ObservedEquipment, ...],
+        rules: WorkEquipmentRules,
+    ) -> tuple[ObservedEquipment, ...]:
+        """Берёт из ответа по кадру ту технику детектора, которую рамки не подтвердили.
+
+        Пока рамка держится, решает она: у неё есть координаты и вердикт арбитра по
+        фрагменту. Резерв вступает в дело, только когда по этой машине не осталось
+        ни одной подтверждённой рамки.
+        """
+        fallback = []
+        for item in recognized:
+            if not self._is_detector_type(item.machine_type, rules):
+                continue
+            if self._is_confirmed_by_boxes(item.machine_type, enriched, rules):
+                continue
+            fallback.append(item)
+        result = tuple(fallback)
+        return result
+
+    def _is_confirmed_by_boxes(
+        self,
+        machine_type: str,
+        enriched: tuple[ObservedEquipment, ...],
+        rules: WorkEquipmentRules,
+    ) -> bool:
+        """Проверяет, подтверждена ли эта машина хотя бы одной рамкой детектора."""
+        classes = self._detector_classes(machine_type, rules)
+        for item in enriched:
+            if item.machine_type in classes and item.count > NOTHING_FOUND:
+                return True
+        return False
+
+    def _detector_classes(self, machine_type: str, rules: WorkEquipmentRules) -> tuple[str, ...]:
+        """Возвращает классы детектора, которыми закрывается эта машина."""
+        for alternative in self._alternatives(rules):
+            if alternative.machine_type == machine_type:
+                return alternative.detector_classes
+        return ()
 
     def _requirement_for_class(self, detector_class: str, rules: WorkEquipmentRules) -> PositionAlternative | None:
         """Находит альтернативу правил, к которой относится класс детектора."""

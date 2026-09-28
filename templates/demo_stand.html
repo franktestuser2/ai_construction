@@ -10,6 +10,14 @@
   --ok:#1f8a4c; --ok-bg:#e7f5ec; --warn:#b26a00; --warn-bg:#fdf1de; --bad:#c0392b; --bad-bg:#fbeceb;
   --det:#2563eb; --det-bg:#e8effd; --vlm:#7c3aed; --vlm-bg:#f1eafd; --accent:#15181d;
   --empty-slot:#ececec;
+  /* Признаки отрезка — холодная гамма, итог отрезка — зелёный, серый и оранжевый:
+     так полоска внутри клетки не спорит по цвету с заливкой самой клетки. */
+  --sig-lead:#1d4ed8; --sig-kit:#c2148f; --sig-motion:#0fa3a3;
+  /* Цвета видов работ: ими подписана полоска снимков. */
+  --stage-1:#1d4ed8; --stage-2:#c2148f; --stage-3:#0f766e; --stage-4:#b45309;
+  --stage-5:#6d28d9; --stage-6:#15803d; --stage-7:#b91c1c;
+  --slot-done:#15803d; --slot-done-bg:#b7e4c7; --slot-open:#939eae; --slot-open-bg:#c7cfda;
+  --slot-blind-bg:#fbeecd;
   --extra:#6b3fb0; --extra-bg:#f4eefc; --extra-line:#dcc9f4;
   --cam:#6b3fb0; --cam-bg:#f1e8fb; --saf:#b3261e; --saf-bg:#fbeae8;
   --ing:#0d6f7d; --ing-bg:#e1f2f5;
@@ -24,6 +32,11 @@
     --cam:#c0a6f0; --cam-bg:#251d33; --saf:#f19790; --saf-bg:#331d1b;
     --ing:#6fc9d6; --ing-bg:#122b30;
     --empty-slot:#262b33;
+    --sig-lead:#5b8cff; --sig-kit:#ff6bd6; --sig-motion:#25d6c4;
+    --stage-1:#5b8cff; --stage-2:#ff6bd6; --stage-3:#25d6c4; --stage-4:#fbbf24;
+    --stage-5:#c4a2ff; --stage-6:#4ade80; --stage-7:#f87171;
+    --slot-done:#3ec46c; --slot-done-bg:#12401f; --slot-open:#59667a; --slot-open-bg:#3f4959;
+    --slot-blind-bg:#3d3011;
   }
 }
 :root[data-theme="dark"]{
@@ -33,6 +46,12 @@
   --extra:#c0a6f0; --extra-bg:#251d33; --extra-line:#3c2f52;
   --cam:#c0a6f0; --cam-bg:#251d33; --saf:#f19790; --saf-bg:#331d1b;
   --ing:#6fc9d6; --ing-bg:#122b30;
+  --empty-slot:#262b33;
+  --sig-lead:#5b8cff; --sig-kit:#ff6bd6; --sig-motion:#25d6c4;
+    --stage-1:#5b8cff; --stage-2:#ff6bd6; --stage-3:#25d6c4; --stage-4:#fbbf24;
+    --stage-5:#c4a2ff; --stage-6:#4ade80; --stage-7:#f87171;
+  --slot-done:#3ec46c; --slot-done-bg:#12401f; --slot-open:#59667a; --slot-open-bg:#3f4959;
+  --slot-blind-bg:#3d3011;
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);
@@ -160,6 +179,10 @@ ul.dev li{margin-bottom:3px}
 .strip button{width:26px;height:26px;border-radius:5px;border:1px solid transparent;cursor:pointer;
   font-size:11px;color:#fff;font-weight:600}
 .strip button.current{border-color:var(--accent);transform:scale(1.12)}
+/* Над полоской — какой цвет какому виду работ отвечает. */
+.stagekeys{display:flex;gap:14px;flex-wrap:wrap;margin:10px 0 6px;font-size:12px;color:var(--muted)}
+.stagekeys span{display:flex;align-items:center;gap:6px}
+.stagekeys i{width:12px;height:12px;border-radius:3px;flex:none}
 table{width:100%;border-collapse:collapse;font-size:13px}
 .ganttwrap{overflow-x:auto;padding-bottom:6px}
 table.plan{border-collapse:collapse;font-size:13px;min-width:100%}
@@ -171,30 +194,55 @@ table.plan th.worklabel{text-align:left;padding:8px 10px;min-width:280px;max-wid
 table.plan td.day{background:var(--bg);min-width:150px}
 table.plan td.day.busy{background:var(--panel)}
 table.plan td.total{padding:6px 10px;white-space:nowrap;color:var(--muted);font-size:12px}
-.minitrack{display:flex;gap:2px;padding:6px 8px}
-.slotbtn{width:14px;border:none;background:none;padding:0;cursor:pointer}
-.slotbtn:disabled{cursor:default;opacity:.45}
-.slotbox{border:1px solid transparent;border-radius:3px;padding:2px 1px;background:var(--empty-slot)}
-.slotbtn[aria-pressed="true"] .slotbox{outline:2px solid var(--accent);outline-offset:1px}
-.slotbox.counted{border-color:#1f6fd0;background:rgba(31,111,208,.2)}
-/* На кадре техника не по этапу: отдельное отклонение, на зачёт не влияет. */
-.slotbox.foreign{box-shadow:0 0 0 2px var(--vlm) inset}
-/* Фронт работ не виден: отрезок вне контроля ИИ, требует ручной проверки. */
+.minitrack{display:flex;gap:3px;padding:6px 8px}
+.slotbtn{width:24px;border:none;background:none;padding:0;cursor:pointer}
+.slotbtn:disabled{cursor:default}
+/* Клетка отрезка говорит двумя разными вещами, поэтому и средства разные:
+   заливка с рамкой — итог отрезка, полоски внутри — какие признаки собраны. */
+.slotbox{display:block;height:29px;border:2px solid var(--slot-open);border-radius:3px;
+  padding:5px 4px;background:var(--slot-open-bg)}
+.slotbtn[aria-pressed="true"] .slotbox{outline:2px solid var(--accent);outline-offset:2px}
+/* Снимка за отрезок не пришло: полоски не рисуются вовсе, вместо них прочерк —
+   пустая клетка с бледными контурами полосок читалась как «не засчитан». */
+.slotbox.empty{border-style:dashed;border-color:var(--line);
+  background:linear-gradient(to top right,transparent calc(50% - 1px),
+  var(--slot-open) calc(50% - 1px),var(--slot-open) calc(50% + 1px),transparent calc(50% + 1px))}
+/* Признаки собраны — отрезок засчитан. */
+.slotbox.counted{border-color:var(--slot-done);background:var(--slot-done-bg)}
+/* Фронт работ не виден: отрезок вне контроля ИИ, требует ручной проверки.
+   Штрих идёт в полную силу цвета: приглушённый тонул под полосками. */
 .slotbox.blind{border-color:var(--warn);background:repeating-linear-gradient(
-  45deg,transparent,transparent 3px,color-mix(in srgb,var(--warn) 45%,transparent) 3px,
-  color-mix(in srgb,var(--warn) 45%,transparent) 6px)}
-.stripe{height:4px;border-radius:1px;margin-bottom:2px;border:1px dashed var(--line);box-sizing:border-box}
+  45deg,var(--slot-blind-bg),var(--slot-blind-bg) 3px,
+  var(--warn) 3px,var(--warn) 6px)}
+/* На кадре техника не по этапу: отдельное отклонение, на зачёт не влияет. */
+.slotbox.foreign{box-shadow:0 0 0 2px var(--bad) inset}
+.slotdemo .slotbox{height:29px}
+.stripe{display:block;height:6px;border-radius:1px;margin-bottom:3px;
+  border:1px solid color-mix(in srgb,var(--ink) 20%,transparent);box-sizing:border-box}
 .stripe:last-child{margin-bottom:0}
 .stripe.on{border:none}
-.stripe.equipment.on{background:#e8b800}
-.stripe.kit.on{background:#e87b00}
-.stripe.motion.on{background:#2fa84f}
+/* Верхняя полоска одна, но состояний у неё два: техника этапа на кадре —
+   и она же, когда за смену собрался весь комплект. */
+.stripe.ready.lead{background:var(--sig-lead);border:none}
+.stripe.ready.full{background:var(--sig-kit);border:none}
+.stripe.motion.on{background:var(--sig-motion)}
+/* Легенда собирается из тех же клеток, что стоят в таблице: иначе она разъезжается с ней. */
+.slotdemo{display:inline-block;width:24px;margin-right:8px;vertical-align:middle}
 tr.idle td{opacity:.5}
 .rolekind{display:block;font-size:11px;color:var(--muted)}
 .share{height:8px;border-radius:4px;background:var(--bg);overflow:hidden;min-width:80px;display:inline-block;vertical-align:middle;margin-right:6px}
 .share i{display:block;height:100%;background:var(--det)}
 .warn{background:var(--warn-bg);color:var(--warn)}
 .kitnote{margin:4px 0 10px;font-size:12px;line-height:1.4;color:var(--warn)}
+/* Оба пункта перечня машин читаются одинаково: это один список из двух частей. */
+/* Признак работ — не машина, а состояние объекта, поэтому и цвет у него свой. */
+.kit.evidence,.kitnote.evidence{color:var(--det)}
+.signals{list-style:none;margin:6px 0 0;padding:0;font-size:13px}
+.signals li{position:relative;padding-left:20px;margin-bottom:4px;color:var(--muted)}
+.signals li::before{position:absolute;left:0;font-weight:700}
+.signals li.yes{color:var(--ink)}
+.signals li.yes::before{content:"✓";color:var(--ok)}
+.signals li.no::before{content:"—";color:var(--muted)}
 .explain{background:var(--bg);border-radius:10px;padding:12px 14px;margin-bottom:14px}
 .explain h3{margin:0 0 6px;font-size:14px}
 .explain p{margin:0 0 6px;font-size:13px;color:var(--muted)}
@@ -279,8 +327,11 @@ __NAV__
         работ, разбитый на такие двадцатиминутные <b>отрезки</b>: три часа работ — девять
         отрезков. Календарный график задаёт, в какой день какой вид работ идёт, поэтому
         каждый снимок попадает в свой отрезок своей смены.</p>
-        <p>Отрезок считается отработанным, когда по нему собраны все признаки. Отсюда и
-        процент выполнения: подтверждённые отрезки к тем, которые удалось измерить.</p>
+        <p>Отрезок считается отработанным, когда сошлись оба условия: нужная техника на
+        площадке собрана целиком и она работает. Отсюда и процент выполнения: подтверждённые
+        отрезки к тем, которые удалось измерить. Не измерены два случая — отрезок, на который
+        снимка не пришло, и отрезок, где фронт работ не виден: оба выпадают из расчёта, потому
+        что говорят о съёмке, а не о работе подрядчика.</p>
       </div>
 
       </details>
@@ -290,44 +341,41 @@ __NAV__
       <div class="legend-card">
 
       <div class="legendbox">
-        <h3>W01–W06: этапы, где работу подтверждает техника</h3>
-        <div class="shiftlegend">
-          <span><i class="chip" style="background:#e8b800"></i>на кадре видна техника этапа</span>
-          <span><i class="chip" style="background:#e87b00"></i>комплект собран за смену</span>
-          <span><i class="chip" style="background:#2fa84f"></i>техника работала: что-то изменилось с прошлым кадром</span>
-        </div>
+        <h3>Полоски внутри клетки</h3>
+        <p class="note">W01–W06: этапы, где работу подтверждает техника. Полоски две: верхняя
+        про машины, нижняя про их работу. Верхняя набирает силу в два шага — сначала на кадре
+        нашлась главная машина, та, что делает работу, потом за смену появилась дополнительная,
+        без которой работа не идёт, и полоска меняет цвет. Отрезок засчитан, когда верхняя
+        пурпурная и горит нижняя.</p>
+        <div class="shiftlegend" id="legend-equipment"></div>
       </div>
 
       <div class="legendbox">
         <h3>W07: этап, где работу подтверждает сам фасад</h3>
         <p class="note">Техника здесь не проверяется вовсе: работают детектор зданий,
         разбор фасада на ячейки и проверка ограждений. Полоски те же три, но означают другое.</p>
-        <div class="shiftlegend">
-          <span><i class="chip" style="background:#e8b800"></i>здание найдено на снимке</span>
-          <span><i class="chip" style="background:#e87b00"></i>фасад разобран на ячейки</span>
-          <span><i class="chip" style="background:#2fa84f"></i>состав ячеек изменился с прошлым кадром</span>
-        </div>
+        <div class="shiftlegend" id="legend-facade"></div>
       </div>
 
       <div class="legendbox">
-        <h3>Общее для всех этапов</h3>
-        <div class="shiftlegend">
-          <span><i class="chip" style="background:rgba(31,111,208,.6)"></i>все три признака собраны — отрезок засчитан</span>
-          <span><i class="chip" style="background:var(--warn)"></i>фронт работ не виден: вне контроля ИИ, нужна ручная проверка</span>
-          <span><i class="chip" style="background:var(--vlm)"></i>на кадре техника не по этапу — отклонение</span>
-        </div>
+        <h3>Заливка клетки — итог отрезка</h3>
+        <p class="note">Итог у отрезка один, и читается он по заливке и рамке всей клетки,
+        а не по полоскам. Три из четырёх итогов говорят о работе на площадке, а два
+        последних — о съёмке: где ИИ не может судить и где судить попросту не по чему.</p>
+        <div class="shiftlegend" id="legend-common"></div>
       </div>
       </div>
       </details>
 
       <div class="ganttwrap"><div id="shifts"></div></div>
-      <p class="hint">На фасадном этапе полоски меняют смысл: жёлтая — здание найдено,
-      оранжевая — ячейки фасада разобраны, зелёная — состав ячеек изменился с прошлым кадром.
+      <p class="hint">На фасадном этапе полоски меняют смысл: верхняя синяя — здание найдено,
+      она же пурпурная — фасад разобран на ячейки, нижняя — состав ячеек изменился с прошлым кадром.
       Пайплайн по технике там не запускается вовсе. Синяя рамка на снимке — находка детектора,
       подтверждённая арбитром; серая пунктирная — отклонённая. Виды работ идут сверху вниз, дни — слева направо, по одному дню на вид работ.
       Внутри дня смена разбита на отрезки по 20 минут. Нажмите отрезок — снимок откроется вверху
-      страницы вместе с тем, что на нём нашли модели. Отрезок засчитан, когда собраны три полоски;
-      у первого снимка смены предыдущего кадра нет, поэтому там достаточно двух.</p>
+      страницы вместе с тем, что на нём нашли модели. Отрезок засчитан, когда верхняя полоска
+      набрала полный цвет и горит нижняя; у первого снимка смены предыдущего кадра нет,
+      поэтому там довольно верхней.</p>
     </div>
   </section>
 
@@ -344,8 +392,10 @@ __NAV__
           <input type="range" id="slider" min="0" value="0">
           <label class="toggle"><input type="checkbox" id="boxes" checked> рамки детектора</label>
         </div>
+        <div class="stagekeys" id="stagekeys"></div>
         <div class="strip" id="strip"></div>
-        <p class="note">Стрелки ← → на клавиатуре листают снимки. Цвет квадрата — вердикт по этой контрольной дате.</p>
+        <p class="note">Стрелки ← → на клавиатуре листают снимки. Цвет квадрата — вид работ,
+        номер — порядок кадра в серии.</p>
       </div>
       <div class="panel" id="details"></div>
     </div>
@@ -358,6 +408,7 @@ __NAV__
 <script id="payload" type="application/json">__DATA__</script>
 <script>
 const DATA = JSON.parse(document.getElementById('payload').textContent);
+const STAGE_COLOR_COUNT = 7;
 const frames = [];
 DATA.stages.forEach((stage, si) => stage.frames.forEach(frame => frames.push({...frame, stage, stageIndex: si})));
 frames.sort((a, b) => a.captured_at.localeCompare(b.captured_at));
@@ -379,12 +430,27 @@ document.getElementById('subtitle').textContent = shiftDays.length
   ? `${DATA.object} · проект ${DATA.project_id} · смен ${DATA.shifts.length}: ${ru(shiftDays[0])} — ${ru(shiftDays[shiftDays.length-1])} · ${shotCount} снимков · сборка ${DATA.built_at}`
   : `${DATA.object} · проект ${DATA.project_id} · сборка ${DATA.built_at}`;
 
+// Полоска снимков: номер — порядок кадра, цвет — вид работ. Вердикт по кадру
+// показывается рядом, в разборе, и дублировать его цветом квадрата незачем.
+function stageColor(index){
+  return `var(--stage-${(index % STAGE_COLOR_COUNT) + 1})`;
+}
+
+function renderStageKeys(){
+  const host = document.getElementById('stagekeys');
+  if(!host){ return; }
+  host.innerHTML = DATA.stages.map((stage, index) =>
+    `<span><i style="background:${stageColor(index)}"></i>${esc(stage.work_id)} · ${esc(stage.short_name)}</span>`
+  ).join('');
+}
+
 function renderStrip(){
-  document.getElementById('strip').innerHTML = frames.map((f, i) =>
-    `<button data-idx="${i}" class="${i === current ? 'current' : ''}" title="${esc(f.file)}"
-      style="background:${colorOf(verdictClass(f))}">${i + 1}</button>`).join('');
-  document.querySelectorAll('.strip button').forEach(b =>
-    b.addEventListener('click', () => show(Number(b.dataset.idx))));
+  document.getElementById('strip').innerHTML = frames.map((frame, index) =>
+    `<button data-idx="${index}" class="${index === current ? 'current' : ''}"
+      title="${esc(frame.stage.work_id)} · ${esc(frame.file)}"
+      style="background:${stageColor(frame.stageIndex)}">${index + 1}</button>`).join('');
+  document.querySelectorAll('.strip button').forEach(button =>
+    button.addEventListener('click', () => show(Number(button.dataset.idx))));
 }
 
 function renderOverlayInto(frame, img, svg, visible){
@@ -501,19 +567,98 @@ function dayLabel(iso){
   return parts[2] + '.' + parts[1];
 }
 
+// Итог отрезка ровно один, и показывается он один раз — заливкой клетки.
+// Полоски внутри отвечают на другой вопрос: какие признаки за отрезок собраны.
+function slotOutcome(slot){
+  if(!slot.frame_id){ return 'empty'; }
+  if(slot.limited_view){ return 'blind'; }
+  return slot.is_counted ? 'counted' : 'open';
+}
+
+// Условий по-прежнему три, показываются они двумя полосками, поэтому под снимком
+// они перечисляются порознь: по полоске видно, что не сошлось, а по списку — что именно.
+const SIGNAL_LABELS = {
+  equipment: ['главная машина на кадре', 'здание найдено на снимке'],
+  kit: ['дополнительная машина за смену', 'фасад разобран на ячейки'],
+  motion: ['техника работала между кадрами', 'состав ячеек изменился с прошлым кадром']
+};
+
+function signalListHtml(shift, slot){
+  const column = shift.facade ? 1 : 0;
+  const items = ['equipment','kit','motion'].map(name => {
+    const yes = Boolean(slot['has_' + name]);
+    return `<li class="${yes ? 'yes' : 'no'}">${SIGNAL_LABELS[name][column]}</li>`;
+  }).join('');
+  return `<ul class="signals">${items}</ul>`;
+}
+
+// Полосок две. Верхняя — про технику, и она набирает силу в два шага: сначала на кадре
+// нашлась техника этапа, потом за смену собрался весь комплект, и полоска меняет цвет,
+// оставаясь той же полоской. Нижняя — про то, что техника работала.
+function slotSignals(slot){
+  const ready = slot.has_equipment ? (slot.has_kit ? 'full' : 'lead') : '';
+  const signals = {ready: ready, motion: Boolean(slot.has_motion)};
+  return signals;
+}
+
+function stripesHtml(signals){
+  const ready = signals.ready ? ` on ${signals.ready}` : '';
+  const motion = signals.motion ? ' on' : '';
+  return `<span class="stripe ready${ready}"></span><span class="stripe motion${motion}"></span>`;
+}
+
+function slotBoxHtml(outcome, signals, foreign){
+  // У клетки без снимка полосок нет вовсе: там прочерк вместо признаков.
+  const inner = outcome === 'empty' ? '' : stripesHtml(signals);
+  return `<span class="slotbox ${outcome}${foreign ? ' foreign' : ''}">${inner}</span>`;
+}
+
 function slotButtonHtml(shift, slot, idx){
-  const stripes = ['equipment','kit','motion']
-    .map(name => `<div class="stripe ${name}${slot['has_' + name] ? ' on' : ''}"></div>`).join('');
-  const foreign = (slot.foreign_equipment || []).length
-    ? `, техника не по этапу: ${slot.foreign_equipment.join(', ')}` : '';
+  const signals = slotSignals(slot);
+  const alien = (slot.foreign_equipment || []).length > 0;
+  const foreign = alien ? `, техника не по этапу: ${slot.foreign_equipment.join(', ')}` : '';
   const hint = !slot.frame_id
     ? `${slotTime(slot.starts_at)} — снимка не пришло`
     : slot.limited_view
-      ? `${slotTime(slot.starts_at)} — фронт работ не виден, нужна ручная проверка`
+      ? `${slotTime(slot.starts_at)} — вне контроля ИИ${slot.limited_reason ? ': ' + slot.limited_reason : ''}`
       : `${slotTime(slot.starts_at)} — ${slot.is_counted ? 'засчитан' : 'не засчитан'}${foreign}`;
   return `<button class="slotbtn" data-work="${esc(shift.work_id)}" data-slot="${idx}"
     aria-pressed="false" ${slot.frame_id ? '' : 'disabled'} title="${esc(hint)}">
-    <div class="slotbox${slot.is_counted ? ' counted' : ''}${slot.limited_view ? ' blind' : ''}${(slot.foreign_equipment || []).length ? ' foreign' : ''}">${stripes}</div></button>`;
+    ${slotBoxHtml(slotOutcome(slot), signals, alien)}</button>`;
+}
+
+// Легенда рисуется теми же клетками, что стоят в таблице: сплошные плашки
+// прошлой легенды опознать в сетке было нельзя.
+const LEGEND_ROWS = {
+  'legend-equipment': [
+    {outcome:'open', signals:{ready:'lead'}, text:'верхняя синяя: на кадре главная машина, комплект ещё не собран'},
+    {outcome:'open', signals:{ready:'full'}, text:'та же полоска пурпурная: за смену появилась и дополнительная машина'},
+    {outcome:'open', signals:{motion:true}, text:'нижняя: техника работала — что-то изменилось с прошлым кадром'}
+  ],
+  'legend-facade': [
+    {outcome:'open', signals:{ready:'lead'}, text:'верхняя синяя: здание на снимке найдено'},
+    {outcome:'open', signals:{ready:'full'}, text:'та же полоска пурпурная: фасад разобран на ячейки'},
+    {outcome:'open', signals:{motion:true}, text:'нижняя: состав ячеек изменился с прошлым кадром'}
+  ],
+  'legend-common': [
+    {outcome:'counted', signals:{ready:'full', motion:true}, text:'полоска пурпурная и работа есть — отрезок засчитан'},
+    {outcome:'open', signals:{ready:'lead', motion:true}, text:'комплекта нет — отрезок не засчитан'},
+    {outcome:'blind', signals:{}, text:'кадр есть, фронт работ не виден — вне контроля ИИ, нужна ручная проверка'},
+    {outcome:'empty', signals:{}, text:'прочерк вместо полосок — кадра нет: камера не снимала, отрезок в расчёт не идёт'},
+    // Рамка показана на клетке без полосок: она отвечает не за признаки, а за находку.
+    {outcome:'open', signals:{}, foreign:true,
+     text:'красная рамка — на кадре есть техника не по этапу; на зачёт не влияет'}
+  ]
+};
+
+function renderLegend(){
+  Object.entries(LEGEND_ROWS).forEach(([id, rows]) => {
+    const host = document.getElementById(id);
+    if(!host){ return; }
+    host.innerHTML = rows.map(row =>
+      `<span><i class="slotdemo">${slotBoxHtml(row.outcome, row.signals, row.foreign)}</i>${row.text}</span>`
+    ).join('');
+  });
 }
 
 function renderShifts(){
@@ -534,13 +679,25 @@ function renderShifts(){
       : '<td class="day"></td>').join('');
     const blind = shift.slots.filter(s => s.limited_view).length;
     const alien = shift.slots.filter(s => (s.foreign_equipment || []).length).length;
+    const kitDone = shift.slots.some(s => s.has_kit);
+    const kitMiss = shift.facade ? 'фасад на ячейки не разобран' : 'комплект за смену не собран';
+    // Причин незачёта три, и каждая называется своим именем: без этого смена
+    // с нулём отрезков ничего не объясняет.
+    const leadMiss = shift.facade ? 'здание на снимках не найдено' : 'главной машины нет ни на одном кадре';
     const badge = (counted > 0
       ? '<span class="pill ok">по графику</span>'
       : '<span class="pill bad">не подтверждён</span>')
+      + (shift.lead_seen === false ? ` <span class="pill warn">${leadMiss}</span>` : '')
+      + (kitDone ? '' : ` <span class="pill warn">${kitMiss}</span>`)
+      + (shift.evidence && shift.evidence_seen === false
+         ? ' <span class="pill warn">признак работ не виден</span>' : '')
       + (blind ? ` <span class="pill warn">вне контроля ИИ: ${blind}</span>` : '')
-      + (alien ? ` <span class="pill vlm">техника не по этапу: ${alien}</span>` : '');
-    return `<tr><th class="worklabel">${esc(shift.work_id)} · ${esc(shift.work_name.split(' → ').pop())}
-      <span class="kit">${esc(shift.kit || '')}</span></th>
+      + (alien ? ` <span class="pill bad">техника не по этапу: ${alien}</span>` : '');
+    return `<tr><th class="worklabel">${esc(shift.work_id)} · ${esc(shift.short_name || shift.work_name)}
+      <span class="kit">${esc(shift.kit || '')}</span>
+      ${shift.extra_kit ? `<span class="kit extra">${esc(shift.extra_kit)}</span>` : ''}
+      ${shift.crew ? `<span class="kit">${esc(shift.crew)}</span>` : ''}
+      ${shift.evidence ? `<span class="kit evidence">${esc(shift.evidence)}</span>` : ''}</th>
       ${cells}<td class="total">${badge} ${minutes} из ${planned} мин</td></tr>`;
   }).join('');
   host.innerHTML = `<table class="plan"><thead><tr><th class="worklabel">Вид работ</th>${head}<th>Засчитано</th></tr></thead><tbody>${rows}</tbody></table>`;
@@ -647,15 +804,18 @@ function openSlot(button){
   draw();
   document.getElementById('sh-viewer').classList.remove('empty');
   foldHelp();
-  const stripes = ['equipment','kit','motion'].filter(name => slot['has_' + name]).map(name => STRIPE_TITLES[name]);
+  const signals = signalListHtml(shift, slot);
   document.getElementById('sh-caption').innerHTML =
     `<h2>${esc(shift.work_id)} · ${slotTime(slot.starts_at)}</h2>
      <p class="note">${esc(slot.frame_id)}</p>
      <p class="kitnote">${esc(shift.kit || '')}</p>
-     ${(slot.foreign_equipment || []).length ? `<p><span class="pill vlm">техника не по этапу</span> На кадре найдено то, чего на этом этапе быть не должно: <b>${esc(slot.foreign_equipment.join(', '))}</b>. В зачёт отрезка эта техника не идёт, но по требованиям это отклонение.</p>` : ''}
-     ${slot.limited_view ? '<p><span class="pill warn">участок вне контроля ИИ</span> Фронт работ не попал в кадр: отрезок не засчитан, и в отставание он не пишется — данные требуют ручной проверки.</p>' : ''}
-     <p>${slot.is_counted ? '<span class="pill ok">слот засчитан</span>' : '<span class="pill warn">слот не засчитан</span>'}
-     ${stripes.length ? ' — ' + esc(stripes.join(', ')) : ' — ни одной полоски'}</p>
+     ${shift.extra_kit ? `<p class="kitnote extra">${esc(shift.extra_kit)}</p>` : ''}
+     ${shift.crew ? `<p class="kitnote">${esc(shift.crew)}</p>` : ''}
+     ${shift.evidence ? `<p class="kitnote evidence">${esc(shift.evidence)}</p>` : ''}
+     ${(slot.foreign_equipment || []).length ? `<p><span class="pill bad">техника не по этапу</span> На кадре найдено то, чего на этом этапе быть не должно: <b>${esc(slot.foreign_equipment.join(', '))}</b>. В зачёт отрезка эта техника не идёт, но по требованиям это отклонение.</p>` : ''}
+     ${slot.limited_view ? `<p><span class="pill warn">участок вне контроля ИИ</span> По этому кадру судить о работах нельзя${slot.limited_reason ? `: <b>${esc(slot.limited_reason)}</b>` : ''}. Отрезок не засчитан, но и в отставание он не пишется — снимок требует ручной проверки.</p>` : ''}
+     <p>${slot.is_counted ? '<span class="pill ok">отрезок засчитан</span>' : '<span class="pill warn">отрезок не засчитан</span>'}</p>
+     ${signals}
      ${slotEquipmentHtml(slot.details)}
      ${slotMotionHtml(slot, slot.details)}`;
   document.getElementById('sh-viewer').classList.remove('empty');
@@ -695,7 +855,7 @@ if(!frames.length){
   document.querySelector('.tab[data-view="frames"]').style.display = 'none';
 }
 document.getElementById('sh-viewer').classList.add('empty');
-renderDashboard(); renderAbout(); renderShifts(); show(0);
+renderDashboard(); renderAbout(); renderLegend(); renderStageKeys(); renderShifts(); show(0);
 switchView(viewFromHash());
 window.addEventListener('hashchange', () => switchView(viewFromHash()));
 </script>

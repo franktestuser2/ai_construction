@@ -10,7 +10,7 @@
 import json
 import logging
 import sys
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from datetime import date
 from pathlib import Path
 
@@ -31,6 +31,7 @@ from site_monitoring.entity import (  # noqa: E402
     ShiftFrames,
     ShiftTimeline,
 )
+from site_monitoring.adapters.scene_comparator import SceneComparator  # noqa: E402
 from site_monitoring.services.shift_timeline import ShiftTimelineService  # noqa: E402
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -55,6 +56,9 @@ MOTIONS_KEY = "motions"
 PLAN_DATE_KEY = "plan_date"
 FRAME_IDS_KEY = "frame_ids"
 FACADE_KEY = "facade"
+SCENE_KEY = "scene_mismatch"
+FRAMES_PAYLOAD_KEY = "frames"
+IMAGE_PATH_KEY = "image_path"
 
 
 def save_observations(cache: dict[str, object]) -> None:
@@ -123,6 +127,7 @@ def observe_work(dependencies, records: list[dict[str, str]], work_id: str) -> d
         OBSERVATIONS_KEY: [asdict(item) for item in raw.observations],
         MOTIONS_KEY: [asdict(item) if item is not None else None for item in raw.motions],
         FACADE_KEY: [asdict(item) if item is not None else None for item in raw.facade],
+        SCENE_KEY: list(raw.scene_mismatch),
     }
     return stored
 
@@ -138,6 +143,7 @@ def restore_observations(stored: dict[str, object]) -> tuple[FrameObservation, .
             observed_on=observed_on,
             equipment=equipment,
             limited_view=bool(item.get("limited_view", False)),
+            limited_reason=str(item.get("limited_reason", "")),
         )
         observations.append(observation)
     return tuple(observations)
@@ -198,11 +204,30 @@ def restore_frames(work_id: str, stored: dict[str, object], settings: Settings) 
         observations=restore_observations(stored),
         motions=restore_motions(stored),
         facade=restore_facade(stored),
+        scene_mismatch=tuple(bool(item) for item in stored.get(SCENE_KEY) or []),
     )
     return frames
 
 
-def build_timelines(cache: dict[str, dict[str, object]], dependencies) -> dict[str, object]:
+def scene_mismatch(records: list[dict[str, str]], work_id: str, settings: Settings) -> tuple[bool, ...]:
+    """Считает по снимкам смены, какие из них сняты не с той сцены.
+
+    Проверка идёт по самим файлам и не требует моделей, поэтому её можно повторить
+    и при пересборке по кешу: результат при тех же снимках всегда один и тот же.
+    """
+    payload = build_payload(records, work_id)
+    frames = payload[FRAMES_PAYLOAD_KEY]
+    paths = tuple(Path(str(item[IMAGE_PATH_KEY])) for item in frames)  # type: ignore[union-attr,index]
+    comparator = SceneComparator(settings.scene_mismatch_threshold)
+    mismatches = comparator.find_mismatches(paths)
+    return mismatches
+
+
+def build_timelines(
+    cache: dict[str, dict[str, object]],
+    dependencies,
+    records: list[dict[str, str]],
+) -> dict[str, object]:
     """Пересобирает ленты слотов по сырым наблюдениям из кеша."""
     settings = _shift_settings()
     service = ShiftTimelineService(
@@ -213,7 +238,9 @@ def build_timelines(cache: dict[str, dict[str, object]], dependencies) -> dict[s
     timelines: dict[str, object] = {}
     for work_id, stored in sorted(cache.items()):
         rules = dependencies.rules_by_work[work_id]
-        timeline = service.build_timeline(rules, restore_frames(work_id, stored, settings))
+        frames = restore_frames(work_id, stored, settings)
+        frames = replace(frames, scene_mismatch=scene_mismatch(records, work_id, settings))
+        timeline = service.build_timeline(rules, frames)
         print_timeline(timeline)
         timelines[work_id] = asdict(timeline)
     return timelines
@@ -246,7 +273,7 @@ def main() -> int:
             # Кеш пишется после каждой смены: разбор одной смены это десятки запросов
             # к моделям, и падение на последней не должно стоить всего прогона.
             save_observations(cache)
-    timelines = build_timelines(cache, dependencies)
+    timelines = build_timelines(cache, dependencies, records)
     TIMELINES_CACHE.write_text(json.dumps(timelines, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
     logger.info("Ленты слотов сохранены в %s", TIMELINES_CACHE)
     return 0

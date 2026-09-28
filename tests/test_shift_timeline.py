@@ -1,5 +1,6 @@
 """Тесты разбора смены на двадцатиминутные слоты."""
 
+from dataclasses import replace
 from datetime import date
 
 from site_monitoring.entity import (
@@ -17,7 +18,7 @@ from site_monitoring.entity import (
     WorkEquipmentRules,
     WorkPosition,
 )
-from site_monitoring.services.shift_timeline import ShiftTimelineService
+from site_monitoring.services.shift_timeline import SCENE_MISMATCH_REASON, ShiftTimelineService
 
 
 def _frames(observations, motions) -> ShiftFrames:
@@ -249,8 +250,8 @@ def test_засчитанное_время_считается_по_слотам(
     assert timeline.counted_minutes == 3 * SLOT_MINUTES
 
 
-def test_сопутствующая_машина_тоже_собирает_комплект() -> None:
-    # Arrange
+def test_допустимая_техника_комплект_не_собирает() -> None:
+    # Arrange: погрузчик на площадке бывает, но работу делают не он
     lead = _rules().positions[0]
     accompanying = WorkPosition(
         position="Погрузчик",
@@ -271,7 +272,7 @@ def test_сопутствующая_машина_тоже_собирает_ко�
     timeline = _service().build_timeline(rules, _frames(observations, ()))
 
     # Assert
-    assert timeline.slots[0].has_kit is True
+    assert timeline.slots[0].has_kit is False
 
 
 def test_признак_работ_комплект_не_собирает() -> None:
@@ -385,17 +386,17 @@ def test_неизменный_состав_ячеек_движением_не_с
     assert timeline.slots[1].is_counted is False
 
 
-def test_машина_из_комплекта_зажигает_жёлтую_полоску() -> None:
-    # Arrange: ведущего экскаватора на кадре нет, есть только самосвал из комплекта
+def test_без_главной_машины_отрезок_не_засчитан() -> None:
+    # Arrange: на кадре только самосвал, а грузит мусор экскаватор — работу делает он
     observations = (_frame(0, (SUPPORT_MACHINE,)),)
 
     # Act
     timeline = _service().build_timeline(_rules(), _frames(observations, (None,)))
 
-    # Assert
-    assert timeline.slots[0].has_equipment is True
-    assert timeline.slots[0].has_kit is True
-    assert timeline.slots[0].is_counted is True
+    # Assert: без главной машины и комплекта нет — она в него входит
+    assert timeline.slots[0].has_equipment is False
+    assert timeline.slots[0].has_kit is False
+    assert timeline.slots[0].is_counted is False
 
 
 def test_пустой_кадр_жёлтую_полоску_не_зажигает() -> None:
@@ -420,9 +421,9 @@ def _limited_frame(index: int, machines: tuple[str, ...]) -> FrameObservation:
     return observation
 
 
-def test_снимок_вне_контроля_ии_не_засчитывается_даже_с_техникой() -> None:
-    # Arrange: техника на кадре видна, но фронт работ в кадр не попал
-    observations = (_limited_frame(0, (LEAD_MACHINE, SUPPORT_MACHINE)),)
+def test_снимок_без_техники_этапа_уходит_вне_контроля_ии() -> None:
+    # Arrange: фронт работ в кадр не попал, техники этапа на снимке нет
+    observations = (_limited_frame(0, ()),)
 
     # Act
     timeline = _service().build_timeline(_rules(), _frames(observations, (None,)))
@@ -432,6 +433,49 @@ def test_снимок_вне_контроля_ии_не_засчитываетс
     assert timeline.slots[0].is_counted is False
     assert timeline.needs_manual_check is True
     assert timeline.limited_slots == 1
+
+
+def test_найденная_техника_без_работы_не_отменяет_ограниченный_обзор() -> None:
+    # Arrange: камера уткнулась в корму машины — техника видна, а чем занята, не сказать
+    observations = (_limited_frame(0, (LEAD_MACHINE, SUPPORT_MACHINE)),)
+
+    # Act
+    timeline = _service().build_timeline(_rules(), _frames(observations, (None,)))
+
+    # Assert
+    assert timeline.slots[0].limited_view is True
+    assert timeline.slots[0].is_counted is False
+    assert timeline.needs_manual_check is True
+
+
+def test_кадр_с_другой_сценой_уходит_вне_контроля_ии() -> None:
+    # Arrange: кадр отрезка снят с другого ракурса, хотя техника на нём есть и модель молчит
+    observations = (_frame(0, (LEAD_MACHINE, SUPPORT_MACHINE)), _frame(1, (LEAD_MACHINE,)))
+    motions = (None, _motion(True))
+    frames = replace(_frames(observations, motions), scene_mismatch=(False, True))
+
+    # Act
+    timeline = _service().build_timeline(_rules(), frames)
+
+    # Assert
+    assert timeline.slots[1].limited_view is True
+    assert timeline.slots[1].limited_reason == SCENE_MISMATCH_REASON
+    # Соседний кадр снят в другом месте: разницу между двумя местами за работу не считаем.
+    assert timeline.slots[1].has_motion is False
+    assert timeline.slots[1].is_counted is False
+
+
+def test_техника_вместе_с_работой_отменяет_жалобу_на_обзор() -> None:
+    # Arrange: на кадре техника этапа, и сравнение с прошлым кадром показало работу
+    observations = (_frame(0, (LEAD_MACHINE, SUPPORT_MACHINE)), _limited_frame(1, (LEAD_MACHINE,)))
+    motions = (None, _motion(True))
+
+    # Act
+    timeline = _service().build_timeline(_rules(), _frames(observations, motions))
+
+    # Assert
+    assert timeline.slots[1].has_motion is True
+    assert timeline.slots[1].limited_view is False
 
 
 def test_при_полном_обзоре_ручная_проверка_не_требуется() -> None:
@@ -497,7 +541,7 @@ def test_пропуск_круга_съёмки_оставляет_отрезо�
     # Arrange: кадры в 09:00, 09:20 и 10:00 — круг в 09:40 камера пропустила.
     from datetime import datetime as _datetime
 
-    from site_monitoring.services.shift_timeline import ShiftTimelineService
+    from site_monitoring.services.shift_timeline import SCENE_MISMATCH_REASON, ShiftTimelineService
 
     entry = PlanEntry(project_id="P", work_id=work_rules.work_id, plan_date=date(2026, 9, 28))
     stamps = (

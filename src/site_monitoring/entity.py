@@ -36,12 +36,17 @@ class PositionKind(str, Enum):
     """Вид позиции в правилах этапа.
 
     Признак работ — состояние самого объекта, комплект — техника, без которой
-    работа физически не идёт, сопутствующая — та, что может быть, а может не быть.
+    работа физически не идёт, сопутствующая — та, что может быть, а может не быть,
+    люди — бригада на фронте работ.
+
+    Бригада стоит наравне с главной машиной: на арматурных и опалубочных работах
+    работу делают люди, а техника при них может и простаивать.
     """
 
     WORK_EVIDENCE = "признак_работ"
     KIT = "комплект"
     ACCOMPANYING = "сопутствующая"
+    CREW = "люди"
 
 
 class FacadeCellKind(str, Enum):
@@ -162,6 +167,7 @@ class FrameObservation:
     observed_on: date
     equipment: tuple[ObservedEquipment, ...]
     limited_view: bool = False
+    limited_reason: str = ""
 
 
 @dataclass(frozen=True)
@@ -336,6 +342,11 @@ class ShiftSlot:
     # Фронт работ не попал в кадр: снимок вне контроля ИИ и требует ручной проверки.
     # Такой отрезок не засчитывается, но и в отставание подрядчику не пишется.
     limited_view: bool = False
+    # Чем именно плох кадр: снято в упор, общий план издалека, фронт вне кадра.
+    limited_reason: str = ""
+    # Кадр снят не с той сцены, что остальные снимки смены: другой ракурс или
+    # вовсе другая площадка. Показывается отдельной отметкой, а не полосками.
+    scene_mismatch: bool = False
     # Техника, которой на этом этапе быть не должно: отдельное отклонение по ТЗ.
     # На зачёт отрезка не влияет — это предупреждение, а не провал работы.
     foreign_equipment: tuple[str, ...] = field(default_factory=tuple)
@@ -398,6 +409,12 @@ class ShiftTimeline:
         return limited
 
     @property
+    def empty_slots(self) -> int:
+        """Число отрезков, на которые снимка не пришло: камера их не снимала."""
+        empty = sum(1 for slot in self.slots if slot.frame_id is None)
+        return empty
+
+    @property
     def foreign_slots(self) -> int:
         """Число отрезков, где нашлась техника не по этапу."""
         found = sum(1 for slot in self.slots if slot.foreign_equipment)
@@ -444,6 +461,9 @@ class ShiftFrames:
     # Время съёмки каждого кадра: по нему кадр кладётся в свой отрезок смены.
     # Пусто — значит времени нет, и кадры раскладываются по порядку.
     captured_at: tuple[datetime | None, ...] = ()
+    # Снимки, снятые не с той сцены, что остальные кадры смены: другой ракурс
+    # или вовсе другая площадка. Сравнивать их с соседями нельзя.
+    scene_mismatch: tuple[bool, ...] = ()
 
     @property
     def is_facade(self) -> bool:

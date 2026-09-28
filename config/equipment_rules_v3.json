@@ -1,387 +1,612 @@
 {
-  "kit_window_minutes": 60,
-  "works": [
+ "kit_window_minutes": 60,
+ "works": [
+  {
+   "work_id": "W01",
+   "work_name": "Погрузка строительного мусора",
+   "positions": [
     {
-      "work_id": "W01",
-      "work_name": "Погрузка строительного мусора",
-      "positions": [
-        {
-          "position": "Машина для погрузки",
-          "kind": "комплект",
-          "min_count": 1,
-          "alternatives": [
-            {
-              "source": "detector",
-              "machine_type": "Экскаватор",
-              "detector_classes": [
-                "Excavator"
-              ]
-            },
-            {
-              "source": "detector",
-              "machine_type": "Фронтальный погрузчик",
-              "detector_classes": [
-                "Bucket loader Big",
-                "Bucket loader Standart"
-              ]
-            }
-          ],
-          "lead": true,
-          "comment": "Названа по работе, а не по классу: мусор грузит экскаватор с ковшом или фронтальный погрузчик. Экскаватор погрузочной машиной по классу не является, но именно он чаще всего и грузит."
-        },
-        {
-          "position": "Самосвал",
-          "kind": "комплект",
-          "min_count": 1,
-          "alternatives": [
-            {
-              "source": "detector",
-              "machine_type": "Самосвал",
-              "detector_classes": [
-                "Dump truck"
-              ]
-            }
-          ]
-        }
-      ]
+     "position": "Машина для погрузки",
+     "kind": "комплект",
+     "min_count": 1,
+     "alternatives": [
+      {
+       "source": "detector",
+       "machine_type": "Экскаватор",
+       "detector_classes": [
+        "Excavator"
+       ]
+      },
+      {
+       "source": "detector",
+       "machine_type": "Фронтальный погрузчик",
+       "detector_classes": [
+        "Bucket loader Big",
+        "Bucket loader Standart"
+       ]
+      }
+     ],
+     "lead": true,
+     "comment": "Названа по работе, а не по классу: мусор грузит экскаватор с ковшом или фронтальный погрузчик. Экскаватор погрузочной машиной по классу не является, но именно он чаще всего и грузит."
     },
     {
-      "work_id": "W02",
-      "work_name": "Буронабивные сваи",
-      "positions": [
-        {
-          "position": "Буровая установка",
-          "kind": "комплект",
-          "min_count": 1,
-          "alternatives": [
-            {
-              "source": "vlm",
-              "machine_type": "Буровая установка",
-              "vlm_question": "Есть ли на снимке буровая или копровая установка со шнеком либо обсадной трубой, и идёт ли бурение скважины или погружение армокаркаса? Если установка работает, статус «работает»."
-            }
-          ],
-          "lead": true
-        },
-        {
-          "position": "Подача армокаркасов",
-          "kind": "комплект",
-          "min_count": 1,
-          "alternatives": [
-            {
-              "source": "detector",
-              "machine_type": "Автокран или кран-манипулятор",
-              "detector_classes": [
-                "Autocran",
-                "Crane manipulator"
-              ]
-            }
-          ]
-        },
-        {
-          "position": "Экскаватор",
-          "kind": "сопутствующая",
-          "min_count": 1,
-          "alternatives": [
-            {
-              "source": "detector",
-              "machine_type": "Экскаватор",
-              "detector_classes": [
-                "Excavator"
-              ]
-            }
-          ]
-        },
-        {
-          "position": "Автобетоносмеситель",
-          "kind": "сопутствующая",
-          "min_count": 1,
-          "alternatives": [
-            {
-              "source": "detector",
-              "machine_type": "Автобетоносмеситель",
-              "detector_classes": [
-                "Mixer"
-              ]
-            }
-          ]
-        }
-      ]
+     "position": "Самосвал",
+     "kind": "комплект",
+     "min_count": 1,
+     "alternatives": [
+      {
+       "source": "detector",
+       "machine_type": "Самосвал",
+       "detector_classes": [
+        "Dump truck"
+       ]
+      }
+     ]
     },
     {
-      "work_id": "W03",
-      "work_name": "Разработка грунта с креплением котлована",
-      "positions": [
-        {
-          "position": "Экскаватор",
-          "kind": "комплект",
-          "min_count": 1,
-          "alternatives": [
-            {
-              "source": "detector",
-              "machine_type": "Экскаватор",
-              "detector_classes": [
-                "Excavator"
-              ]
-            }
-          ],
-          "lead": true
-        },
-        {
-          "position": "Самосвал",
-          "kind": "комплект",
-          "min_count": 1,
-          "alternatives": [
-            {
-              "source": "detector",
-              "machine_type": "Самосвал",
-              "detector_classes": [
-                "Dump truck"
-              ]
-            }
-          ]
-        },
-        {
-          "position": "Погрузчик",
-          "kind": "сопутствующая",
-          "min_count": 1,
-          "alternatives": [
-            {
-              "source": "detector",
-              "machine_type": "Фронтальный погрузчик",
-              "detector_classes": [
-                "Bucket loader Big",
-                "Bucket loader Standart"
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "work_id": "W04",
-      "work_name": "Фундаментная плита и бетонная подготовка",
-      "positions": [
-        {
-          "position": "Монолитная плита",
-          "kind": "признак_работ",
-          "min_count": 1,
-          "alternatives": [
-            {
-              "source": "vlm",
-              "machine_type": "Монолитная плита",
-              "vlm_question": "Видны ли на снимке признаки устройства монолитной фундаментной плиты: опалубка, арматурные каркасы или сетки, бетонная подготовка, укладка гидроизоляции, подача бетона? Если такие работы ведутся, статус «работает»."
-            }
-          ]
-        },
-        {
-          "position": "Подача бетона",
-          "kind": "комплект",
-          "min_count": 1,
-          "alternatives": [
-            {
-              "source": "detector",
-              "machine_type": "Автобетоносмеситель",
-              "detector_classes": [
-                "Mixer"
-              ]
-            },
-            {
-              "source": "vlm",
-              "machine_type": "Бетононасос",
-              "vlm_question": "Есть ли на снимке автобетононасос со стрелой и подаёт ли он бетон?"
-            },
-            {
-              "source": "detector",
-              "machine_type": "Автокран или кран-манипулятор",
-              "detector_classes": [
-                "Autocran",
-                "Crane manipulator"
-              ]
-            }
-          ],
-          "lead": true
-        },
-        {
-          "position": "Экскаватор",
-          "kind": "сопутствующая",
-          "min_count": 1,
-          "alternatives": [
-            {
-              "source": "detector",
-              "machine_type": "Экскаватор",
-              "detector_classes": [
-                "Excavator"
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "work_id": "W05",
-      "work_name": "Несущие конструкции подземной части",
-      "positions": [
-        {
-          "position": "Монолитные конструкции ниже отметки 0",
-          "kind": "признак_работ",
-          "min_count": 1,
-          "alternatives": [
-            {
-              "source": "vlm",
-              "machine_type": "Монолитные конструкции подземной части",
-              "vlm_question": "Видны ли на снимке монолитные конструкции подземной части: опалубка стен или колонн ниже отметки 0, арматурные каркасы, забетонированные стены котлована? Если такие работы ведутся, статус «работает»."
-            }
-          ]
-        },
-        {
-          "position": "Подъёмно-транспортная машина",
-          "kind": "комплект",
-          "min_count": 1,
-          "alternatives": [
-            {
-              "source": "vlm",
-              "machine_type": "Башенный кран",
-              "vlm_question": "Есть ли на снимке башенный кран, обслуживающий монолитные работы ниже отметки 0, и работает ли он? Если стрела повёрнута к захватке или на крюке груз, статус «работает»."
-            },
-            {
-              "source": "detector",
-              "machine_type": "Автокран или кран-манипулятор",
-              "detector_classes": [
-                "Autocran",
-                "Crane manipulator"
-              ]
-            }
-          ],
-          "lead": true
-        },
-        {
-          "position": "Автобетоносмеситель",
-          "kind": "сопутствующая",
-          "min_count": 1,
-          "alternatives": [
-            {
-              "source": "detector",
-              "machine_type": "Автобетоносмеситель",
-              "detector_classes": [
-                "Mixer"
-              ]
-            }
-          ]
-        },
-        {
-          "position": "Телескопический погрузчик",
-          "kind": "сопутствующая",
-          "min_count": 1,
-          "alternatives": [
-            {
-              "source": "detector",
-              "machine_type": "Телескопический погрузчик",
-              "detector_classes": [
-                "Forklift Giraffe"
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "work_id": "W06",
-      "work_name": "Несущие конструкции надземной части",
-      "positions": [
-        {
-          "position": "Каркас надземной части",
-          "kind": "признак_работ",
-          "min_count": 1,
-          "alternatives": [
-            {
-              "source": "vlm",
-              "machine_type": "Каркас надземной части",
-              "vlm_question": "Видны ли на снимке несущие конструкции надземной части: колонны, стены или перекрытия выше уровня земли, опалубка или арматура на этаже? Если такие работы ведутся, статус «работает»."
-            }
-          ]
-        },
-        {
-          "position": "Подъёмно-транспортная машина",
-          "kind": "комплект",
-          "min_count": 1,
-          "alternatives": [
-            {
-              "source": "vlm",
-              "machine_type": "Башенный кран",
-              "vlm_question": "Есть ли на снимке башенный кран, обслуживающий каркас надземной части здания, и работает ли он?"
-            },
-            {
-              "source": "detector",
-              "machine_type": "Автокран или кран-манипулятор",
-              "detector_classes": [
-                "Autocran",
-                "Crane manipulator"
-              ]
-            }
-          ],
-          "lead": true
-        },
-        {
-          "position": "Автобетоносмеситель",
-          "kind": "сопутствующая",
-          "min_count": 1,
-          "alternatives": [
-            {
-              "source": "detector",
-              "machine_type": "Автобетоносмеситель",
-              "detector_classes": [
-                "Mixer"
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "work_id": "W07",
-      "work_name": "Монтаж фасадной системы",
-      "positions": [
-        {
-          "position": "Фасадная облицовка",
-          "kind": "признак_работ",
-          "min_count": 1,
-          "alternatives": [
-            {
-              "source": "vlm",
-              "machine_type": "Фасадная облицовка",
-              "vlm_question": "Смонтирована ли на здании фасадная облицовка — навесные панели, кирпичная кладка наружных стен, витражи или остекление? Считай обнаруженной, если облицовка выполнена хотя бы частично. Статус «работает» ставь, если этап фасада достигнут: облицовка смонтирована полностью либо монтируется прямо сейчас. Статус «не задействована» — только если виден голый каркас без фасада. В обосновании укажи, какая часть здания закрыта облицовкой, а какая нет."
-            }
-          ]
-        },
-        {
-          "position": "Средство доступа на фасад",
-          "kind": "комплект",
-          "min_count": 1,
-          "alternatives": [
-            {
-              "source": "vlm",
-              "machine_type": "Автовышка или мачтовый подъёмник",
-              "vlm_question": "Есть ли на фасаде здания автовышка, мачтовый подъёмник или строительная люлька?"
-            }
-          ],
-          "lead": true
-        },
-        {
-          "position": "Телескопический погрузчик",
-          "kind": "сопутствующая",
-          "min_count": 1,
-          "alternatives": [
-            {
-              "source": "detector",
-              "machine_type": "Телескопический погрузчик",
-              "detector_classes": [
-                "Forklift Giraffe"
-              ]
-            }
-          ]
-        }
-      ],
-      "facade_check": true
+     "position": "Бульдозер",
+     "kind": "сопутствующая",
+     "min_count": 1,
+     "alternatives": [
+      {
+       "source": "detector",
+       "machine_type": "Бульдозер",
+       "detector_classes": [
+        "Bulldozer"
+       ]
+      }
+     ]
     }
-  ]
+   ]
+  },
+  {
+   "work_id": "W02",
+   "work_name": "Буронабивные сваи",
+   "positions": [
+    {
+     "position": "Буровая установка",
+     "kind": "комплект",
+     "min_count": 1,
+     "alternatives": [
+      {
+       "source": "vlm",
+       "machine_type": "Буровая установка",
+       "vlm_question": "Есть ли на снимке буровая или копровая установка со шнеком либо обсадной трубой, и идёт ли бурение скважины или погружение армокаркаса? Если установка работает, статус «работает»."
+      }
+     ],
+     "lead": true
+    },
+    {
+     "position": "Подача армокаркасов",
+     "kind": "комплект",
+     "min_count": 1,
+     "alternatives": [
+      {
+       "source": "detector",
+       "machine_type": "Автокран или кран-манипулятор",
+       "detector_classes": [
+        "Autocran",
+        "Crane manipulator"
+       ]
+      }
+     ]
+    },
+    {
+     "position": "Экскаватор",
+     "kind": "сопутствующая",
+     "min_count": 1,
+     "alternatives": [
+      {
+       "source": "detector",
+       "machine_type": "Экскаватор",
+       "detector_classes": [
+        "Excavator"
+       ]
+      }
+     ]
+    },
+    {
+     "position": "Автобетоносмеситель",
+     "kind": "комплект",
+     "min_count": 1,
+     "alternatives": [
+      {
+       "source": "detector",
+       "machine_type": "Автобетоносмеситель",
+       "detector_classes": [
+        "Mixer"
+       ]
+      }
+     ]
+    },
+    {
+     "position": "Самосвал",
+     "kind": "сопутствующая",
+     "min_count": 1,
+     "alternatives": [
+      {
+       "source": "detector",
+       "machine_type": "Самосвал",
+       "detector_classes": [
+        "Dump truck"
+       ]
+      }
+     ]
+    },
+    {
+     "position": "Прицеп или полуприцеп",
+     "kind": "сопутствующая",
+     "min_count": 1,
+     "alternatives": [
+      {
+       "source": "detector",
+       "machine_type": "Прицеп или полуприцеп",
+       "detector_classes": [
+        "Trailer"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "work_id": "W03",
+   "work_name": "Разработка грунта с креплением котлована",
+   "positions": [
+    {
+     "position": "Экскаватор",
+     "kind": "комплект",
+     "min_count": 1,
+     "alternatives": [
+      {
+       "source": "detector",
+       "machine_type": "Экскаватор",
+       "detector_classes": [
+        "Excavator"
+       ]
+      }
+     ],
+     "lead": true
+    },
+    {
+     "position": "Самосвал",
+     "kind": "комплект",
+     "min_count": 1,
+     "alternatives": [
+      {
+       "source": "detector",
+       "machine_type": "Самосвал",
+       "detector_classes": [
+        "Dump truck"
+       ]
+      }
+     ]
+    },
+    {
+     "position": "Погрузчик",
+     "kind": "сопутствующая",
+     "min_count": 1,
+     "alternatives": [
+      {
+       "source": "detector",
+       "machine_type": "Фронтальный погрузчик",
+       "detector_classes": [
+        "Bucket loader Big",
+        "Bucket loader Standart"
+       ]
+      }
+     ]
+    },
+    {
+     "position": "Бульдозер",
+     "kind": "сопутствующая",
+     "min_count": 1,
+     "alternatives": [
+      {
+       "source": "detector",
+       "machine_type": "Бульдозер",
+       "detector_classes": [
+        "Bulldozer"
+       ]
+      }
+     ]
+    },
+    {
+     "position": "Автокран или кран-манипулятор",
+     "kind": "сопутствующая",
+     "min_count": 1,
+     "alternatives": [
+      {
+       "source": "detector",
+       "machine_type": "Автокран или кран-манипулятор",
+       "detector_classes": [
+        "Autocran",
+        "Crane manipulator"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "work_id": "W04",
+   "work_name": "Фундаментная плита и бетонная подготовка",
+   "positions": [
+    {
+     "position": "Монолитная плита",
+     "kind": "признак_работ",
+     "min_count": 1,
+     "alternatives": [
+      {
+       "source": "vlm",
+       "machine_type": "Монолитная плита",
+       "vlm_question": "Видны ли на снимке признаки устройства монолитной фундаментной плиты: опалубка, арматурные каркасы или сетки, бетонная подготовка, укладка гидроизоляции, подача бетона? Если такие работы ведутся, статус «работает»."
+      }
+     ]
+    },
+    {
+     "position": "Подача бетона или подъём конструкций",
+     "kind": "комплект",
+     "min_count": 1,
+     "alternatives": [
+      {
+       "source": "detector",
+       "machine_type": "Автобетоносмеситель",
+       "detector_classes": [
+        "Mixer"
+       ]
+      },
+      {
+       "source": "vlm",
+       "machine_type": "Бетононасос",
+       "vlm_question": "Есть ли на снимке автобетононасос со стрелой и подаёт ли он бетон?"
+      },
+      {
+       "source": "detector",
+       "machine_type": "Автокран или кран-манипулятор",
+       "detector_classes": [
+        "Autocran",
+        "Crane manipulator"
+       ]
+      },
+      {
+       "source": "vlm",
+       "machine_type": "Башенный кран",
+       "vlm_question": "Есть ли на снимке башенный кран и работает ли он сейчас?"
+      }
+     ],
+     "lead": true
+    },
+    {
+     "position": "Экскаватор",
+     "kind": "комплект",
+     "min_count": 1,
+     "alternatives": [
+      {
+       "source": "detector",
+       "machine_type": "Экскаватор",
+       "detector_classes": [
+        "Excavator"
+       ]
+      }
+     ]
+    },
+    {
+     "position": "Самосвал",
+     "kind": "комплект",
+     "min_count": 1,
+     "alternatives": [
+      {
+       "source": "detector",
+       "machine_type": "Самосвал",
+       "detector_classes": [
+        "Dump truck"
+       ]
+      }
+     ]
+    },
+    {
+     "position": "Телескопический погрузчик",
+     "kind": "сопутствующая",
+     "min_count": 1,
+     "alternatives": [
+      {
+       "source": "detector",
+       "machine_type": "Телескопический погрузчик",
+       "detector_classes": [
+        "Forklift Giraffe"
+       ]
+      }
+     ]
+    },
+    {
+     "position": "Бригада на фронте работ",
+     "kind": "люди",
+     "min_count": 1,
+     "alternatives": [
+      {
+       "source": "vlm",
+       "machine_type": "Бригада на фронте работ",
+       "vlm_question": "Работают ли на фронте работ люди: вяжут арматуру, ставят или снимают опалубку, принимают бетон, заглаживают поверхность? Считай обнаруженной, если рабочие находятся непосредственно на захватке и заняты делом, а не проходят мимо. Статус «работает» ставь, если видно само действие или инструмент в руках."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "work_id": "W05",
+   "work_name": "Несущие конструкции подземной части",
+   "positions": [
+    {
+     "position": "Монолитные конструкции ниже отметки 0",
+     "kind": "признак_работ",
+     "min_count": 1,
+     "alternatives": [
+      {
+       "source": "vlm",
+       "machine_type": "Монолитные конструкции подземной части",
+       "vlm_question": "Видны ли на снимке монолитные конструкции подземной части: опалубка стен или колонн ниже отметки 0, арматурные каркасы, забетонированные стены котлована? Если такие работы ведутся, статус «работает»."
+      }
+     ]
+    },
+    {
+     "position": "Подъёмно-транспортная машина",
+     "kind": "комплект",
+     "min_count": 1,
+     "alternatives": [
+      {
+       "source": "vlm",
+       "machine_type": "Башенный кран",
+       "vlm_question": "Есть ли на снимке башенный кран, обслуживающий монолитные работы ниже отметки 0, и работает ли он? Если стрела повёрнута к захватке или на крюке груз, статус «работает»."
+      },
+      {
+       "source": "detector",
+       "machine_type": "Автокран или кран-манипулятор",
+       "detector_classes": [
+        "Autocran",
+        "Crane manipulator"
+       ]
+      }
+     ],
+     "lead": true
+    },
+    {
+     "position": "Телескопический погрузчик",
+     "kind": "сопутствующая",
+     "min_count": 1,
+     "alternatives": [
+      {
+       "source": "detector",
+       "machine_type": "Телескопический погрузчик",
+       "detector_classes": [
+        "Forklift Giraffe"
+       ]
+      }
+     ]
+    },
+    {
+     "position": "Экскаватор",
+     "kind": "сопутствующая",
+     "min_count": 1,
+     "alternatives": [
+      {
+       "source": "detector",
+       "machine_type": "Экскаватор",
+       "detector_classes": [
+        "Excavator"
+       ]
+      }
+     ]
+    },
+    {
+     "position": "Самосвал",
+     "kind": "сопутствующая",
+     "min_count": 1,
+     "alternatives": [
+      {
+       "source": "detector",
+       "machine_type": "Самосвал",
+       "detector_classes": [
+        "Dump truck"
+       ]
+      }
+     ]
+    },
+    {
+     "position": "Прицеп или полуприцеп",
+     "kind": "сопутствующая",
+     "min_count": 1,
+     "alternatives": [
+      {
+       "source": "detector",
+       "machine_type": "Прицеп или полуприцеп",
+       "detector_classes": [
+        "Trailer"
+       ]
+      }
+     ]
+    },
+    {
+     "position": "Подача бетона",
+     "kind": "комплект",
+     "min_count": 1,
+     "alternatives": [
+      {
+       "source": "detector",
+       "machine_type": "Автобетоносмеситель",
+       "detector_classes": [
+        "Mixer"
+       ]
+      },
+      {
+       "source": "vlm",
+       "machine_type": "Бетононасос",
+       "vlm_question": "Есть ли на снимке автобетононасос со стрелой и подаёт ли он бетон?"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "work_id": "W06",
+   "work_name": "Несущие конструкции надземной части",
+   "positions": [
+    {
+     "position": "Каркас надземной части",
+     "kind": "признак_работ",
+     "min_count": 1,
+     "alternatives": [
+      {
+       "source": "vlm",
+       "machine_type": "Каркас надземной части",
+       "vlm_question": "Видны ли на снимке несущие конструкции надземной части: колонны, стены или перекрытия выше уровня земли, опалубка или арматура на этаже? Если такие работы ведутся, статус «работает»."
+      }
+     ]
+    },
+    {
+     "position": "Подъёмно-транспортная машина",
+     "kind": "комплект",
+     "min_count": 1,
+     "alternatives": [
+      {
+       "source": "vlm",
+       "machine_type": "Башенный кран",
+       "vlm_question": "Есть ли на снимке башенный кран, обслуживающий каркас надземной части здания, и работает ли он?"
+      },
+      {
+       "source": "detector",
+       "machine_type": "Автокран или кран-манипулятор",
+       "detector_classes": [
+        "Autocran",
+        "Crane manipulator"
+       ]
+      }
+     ],
+     "lead": true
+    },
+    {
+     "position": "Телескопический погрузчик",
+     "kind": "сопутствующая",
+     "min_count": 1,
+     "alternatives": [
+      {
+       "source": "detector",
+       "machine_type": "Телескопический погрузчик",
+       "detector_classes": [
+        "Forklift Giraffe"
+       ]
+      }
+     ]
+    },
+    {
+     "position": "Прицеп или полуприцеп",
+     "kind": "сопутствующая",
+     "min_count": 1,
+     "alternatives": [
+      {
+       "source": "detector",
+       "machine_type": "Прицеп или полуприцеп",
+       "detector_classes": [
+        "Trailer"
+       ]
+      }
+     ]
+    },
+    {
+     "position": "Подача бетона",
+     "kind": "комплект",
+     "min_count": 1,
+     "alternatives": [
+      {
+       "source": "detector",
+       "machine_type": "Автобетоносмеситель",
+       "detector_classes": [
+        "Mixer"
+       ]
+      },
+      {
+       "source": "vlm",
+       "machine_type": "Бетононасос",
+       "vlm_question": "Есть ли на снимке автобетононасос со стрелой и подаёт ли он бетон?"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "work_id": "W07",
+   "work_name": "Монтаж фасадной системы",
+   "positions": [
+    {
+     "position": "Фасадная облицовка",
+     "kind": "признак_работ",
+     "min_count": 1,
+     "alternatives": [
+      {
+       "source": "vlm",
+       "machine_type": "Фасадная облицовка",
+       "vlm_question": "Смонтирована ли на здании фасадная облицовка — навесные панели, кирпичная кладка наружных стен, витражи или остекление? Считай обнаруженной, если облицовка выполнена хотя бы частично. Статус «работает» ставь, если этап фасада достигнут: облицовка смонтирована полностью либо монтируется прямо сейчас. Статус «не задействована» — только если виден голый каркас без фасада. В обосновании укажи, какая часть здания закрыта облицовкой, а какая нет."
+      }
+     ]
+    },
+    {
+     "position": "Средство доступа на фасад",
+     "kind": "комплект",
+     "min_count": 1,
+     "alternatives": [
+      {
+       "source": "vlm",
+       "machine_type": "Автовышка или мачтовый подъёмник",
+       "vlm_question": "Есть ли на фасаде здания автовышка, мачтовый подъёмник или строительная люлька?"
+      }
+     ],
+     "lead": true
+    },
+    {
+     "position": "Телескопический погрузчик",
+     "kind": "комплект",
+     "min_count": 1,
+     "alternatives": [
+      {
+       "source": "detector",
+       "machine_type": "Телескопический погрузчик",
+       "detector_classes": [
+        "Forklift Giraffe"
+       ]
+      }
+     ]
+    },
+    {
+     "position": "Автокран или кран-манипулятор",
+     "kind": "сопутствующая",
+     "min_count": 1,
+     "alternatives": [
+      {
+       "source": "detector",
+       "machine_type": "Автокран или кран-манипулятор",
+       "detector_classes": [
+        "Autocran",
+        "Crane manipulator"
+       ]
+      }
+     ]
+    },
+    {
+     "position": "Прицеп или полуприцеп",
+     "kind": "сопутствующая",
+     "min_count": 1,
+     "alternatives": [
+      {
+       "source": "detector",
+       "machine_type": "Прицеп или полуприцеп",
+       "detector_classes": [
+        "Trailer"
+       ]
+      }
+     ]
+    }
+   ],
+   "facade_check": true
+  }
+ ]
 }

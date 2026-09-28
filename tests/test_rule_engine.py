@@ -151,9 +151,9 @@ def test_day_without_frames_is_not_verifiable(plan_entry, work_rules) -> None:
 
 
 def test_limited_view_marks_day_as_not_measured(plan_entry, work_rules) -> None:
-    # Arrange
+    # Arrange: фронт работ перекрыт, техники этапа на снимке не нашлось
     service = RuleEngineService()
-    observations = (_frame((_excavator(), _tower_crane()), limited_view=True),)
+    observations = (_frame((), limited_view=True),)
 
     # Act
     assessment = service.assess_day(plan_entry, work_rules, observations)
@@ -161,7 +161,20 @@ def test_limited_view_marks_day_as_not_measured(plan_entry, work_rules) -> None:
     # Assert
     assert assessment.deviations[0].kind is DeviationKind.LIMITED_VIEW
     assert assessment.is_verifiable is False
-    assert assessment.is_compliant is True
+
+
+def test_найденная_техника_не_отменяет_ограниченный_обзор(plan_entry, work_rules) -> None:
+    # Arrange: камера уткнулась в саму машину — техника видна, а фронт работ нет
+    service = RuleEngineService()
+    observations = (_frame((_excavator(), _tower_crane()), limited_view=True),)
+
+    # Act
+    assessment = service.assess_day(plan_entry, work_rules, observations)
+
+    # Assert
+    kinds = [item.kind for item in assessment.deviations]
+    assert DeviationKind.LIMITED_VIEW in kinds
+    assert assessment.is_verifiable is False
 
 
 def test_position_is_closed_by_any_alternative(plan_entry) -> None:
@@ -220,7 +233,7 @@ def test_missing_work_evidence_breaks_compliance(plan_entry) -> None:
     assert assessment.is_compliant is False
 
 
-def test_missing_accompanying_machine_does_not_break_compliance(plan_entry) -> None:
+def test_отсутствие_сопутствующей_машины_не_даёт_отклонения(plan_entry) -> None:
     # Arrange
     service = RuleEngineService()
     truck = PositionAlternative(
@@ -240,8 +253,8 @@ def test_missing_accompanying_machine_does_not_break_compliance(plan_entry) -> N
     # Act
     assessment = service.assess_day(plan_entry, rules, observations)
 
-    # Assert
-    assert assessment.deviations[0].kind is DeviationKind.MISSING_AUXILIARY
+    # Assert: сопутствующая машина может быть, а может не быть — это не замечание
+    assert assessment.deviations == ()
     assert assessment.is_compliant is True
 
 

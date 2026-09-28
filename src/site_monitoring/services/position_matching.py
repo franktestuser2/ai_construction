@@ -5,16 +5,20 @@
 сверки, и для разбора смены по слотам, поэтому живёт отдельно.
 """
 
-from ..entity import EquipmentSource, ObservedEquipment, PositionAlternative, WorkPosition
+from ..entity import ObservedEquipment, PositionAlternative, WorkPosition
 
 
 def is_same_equipment(alternative: PositionAlternative, observed: ObservedEquipment) -> bool:
-    """Проверяет, что находка относится к машине из этой альтернативы."""
-    if observed.source is not alternative.source:
-        return False
-    if alternative.source is EquipmentSource.DETECTOR:
-        return observed.machine_type in alternative.detector_classes
-    return observed.machine_type == alternative.machine_type
+    """Проверяет, что находка относится к машине из этой альтернативы.
+
+    Источник находки не важен: одну и ту же машину детектор называет своим английским
+    классом, а модель — названием позиции из правил. Экскаватор, опознанный по кадру
+    целиком, закрывает позицию так же, как экскаватор, найденный рамкой.
+    """
+    if observed.machine_type == alternative.machine_type:
+        return True
+    same = observed.machine_type in alternative.detector_classes
+    return same
 
 
 def match_position(

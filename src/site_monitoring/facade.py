@@ -23,6 +23,7 @@ from .entity import (
 )
 from .mappers import map_frames_payload_to_observations
 from .adapters.motion_observer import MotionObserver
+from .adapters.scene_comparator import SceneComparator
 from .services.equipment_recognition import EquipmentRecognitionService
 from .services.facade_readiness import FacadeReadinessService
 from .services.forecast import ForecastService
@@ -72,6 +73,7 @@ class SiteMonitoringFacade:
         recognition: EquipmentRecognitionService | None = None,
         facade_readiness: FacadeReadinessService | None = None,
         motion_observer: MotionObserver | None = None,
+        scene_comparator: SceneComparator | None = None,
         shift_timeline: ShiftTimelineService | None = None,
         parallel_requests: int = DEFAULT_PARALLEL_REQUESTS,
         camera_markup: dict[str, tuple[float, float, float, float]] | None = None,
@@ -84,6 +86,7 @@ class SiteMonitoringFacade:
         self._recognition = recognition
         self._facade_readiness = facade_readiness
         self._motion_observer = motion_observer
+        self._scene_comparator = scene_comparator
         self._shift_timeline = shift_timeline
         self._parallel_requests = max(parallel_requests, MIN_PARALLEL_REQUESTS)
         self._camera_markup = camera_markup or {}
@@ -221,13 +224,24 @@ class SiteMonitoringFacade:
             return None
         observations = self._recognize_frames(frames_payload, plan_entry.plan_date, rules)
         motions = self._observe_motion(frames_payload, rules)
+        # Проверка без моделей: не сменился ли ракурс — её ответ одинаков при каждом прогоне.
+        scene_mismatch = self._find_scene_mismatch(frames_payload)
         frames = ShiftFrames(
             plan_entry=plan_entry,
             frame_ids=frame_ids,
             observations=observations,
             motions=motions,
+            scene_mismatch=scene_mismatch,
         )
         return frames
+
+    def _find_scene_mismatch(self, frames_payload: list[dict[str, object]]) -> tuple[bool, ...]:
+        """Отмечает снимки смены, снятые не с той сцены, что остальные."""
+        if self._scene_comparator is None:
+            return ()
+        paths = tuple(Path(str(item[IMAGE_PATH_KEY])) for item in frames_payload)
+        mismatches = self._scene_comparator.find_mismatches(paths)
+        return mismatches
 
     def _observe_facade(
         self,

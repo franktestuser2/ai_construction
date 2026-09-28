@@ -38,11 +38,17 @@ class StageFact:
     counted_slots: int
     limited_slots: int
     slot_minutes: int
+    empty_slots: int = NOTHING
 
     @property
     def measured_slots(self) -> int:
-        """Отрезки, по которым вообще можно судить: план без неизмеренного."""
-        measured = self.planned_slots - self.limited_slots
+        """Отрезки, по которым вообще можно судить: план без неизмеренного.
+
+        Не измерены две вещи: отрезки, где фронт работ не виден, и отрезки, на которые
+        снимка не пришло вовсе. Ни те, ни другие не говорят о работе подрядчика, и
+        держать их в знаменателе значит записывать в отставание пробелы съёмки.
+        """
+        measured = self.planned_slots - self.limited_slots - self.empty_slots
         return max(measured, NOTHING)
 
     @property
@@ -140,6 +146,7 @@ def build_stage_fact(timeline: ShiftTimeline, title: str, planned_slots: int) ->
         counted_slots=timeline.counted_slots,
         limited_slots=timeline.limited_slots,
         slot_minutes=timeline.slot_minutes,
+        empty_slots=timeline.empty_slots,
     )
     return fact
 

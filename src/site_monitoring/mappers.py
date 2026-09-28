@@ -55,6 +55,7 @@ FRAME_ID_KEY = "frame_id"
 FRAME_DATE_KEY = "observed_on"
 FRAME_EQUIPMENT_KEY = "equipment"
 FRAME_LIMITED_VIEW_KEY = "limited_view"
+FRAME_LIMITED_REASON_KEY = "limited_reason"
 FRAME_STATUS_KEY = "status"
 FRAME_COUNT_KEY = "count"
 FRAME_CONFIDENCE_KEY = "confidence"
@@ -218,6 +219,7 @@ def map_frames_payload_to_observations(payload: list[dict[str, object]]) -> tupl
             observed_on=observed_on,
             equipment=equipment,
             limited_view=bool(frame_payload.get(FRAME_LIMITED_VIEW_KEY, False)),
+            limited_reason=str(frame_payload.get(FRAME_LIMITED_REASON_KEY, "")),
         )
         observations.append(observation)
     result = tuple(observations)

@@ -13,6 +13,8 @@
         "has_motion": false,
         "is_first": true,
         "limited_view": false,
+        "limited_reason": "",
+        "scene_mismatch": false,
         "foreign_equipment": []
       },
       {
@@ -23,7 +25,9 @@
         "has_kit": false,
         "has_motion": true,
         "is_first": false,
-        "limited_view": true,
+        "limited_view": false,
+        "limited_reason": "",
+        "scene_mismatch": false,
         "foreign_equipment": []
       },
       {
@@ -34,7 +38,9 @@
         "has_kit": false,
         "has_motion": true,
         "is_first": false,
-        "limited_view": true,
+        "limited_view": false,
+        "limited_reason": "",
+        "scene_mismatch": false,
         "foreign_equipment": []
       },
       {
@@ -45,7 +51,9 @@
         "has_kit": false,
         "has_motion": true,
         "is_first": false,
-        "limited_view": true,
+        "limited_view": false,
+        "limited_reason": "",
+        "scene_mismatch": false,
         "foreign_equipment": []
       },
       {
@@ -57,6 +65,8 @@
         "has_motion": true,
         "is_first": false,
         "limited_view": false,
+        "limited_reason": "",
+        "scene_mismatch": false,
         "foreign_equipment": []
       },
       {
@@ -67,7 +77,9 @@
         "has_kit": false,
         "has_motion": true,
         "is_first": false,
-        "limited_view": true,
+        "limited_view": false,
+        "limited_reason": "фронт работ вне кадра",
+        "scene_mismatch": false,
         "foreign_equipment": []
       },
       {
@@ -79,6 +91,8 @@
         "has_motion": false,
         "is_first": false,
         "limited_view": true,
+        "limited_reason": "ракурс не совпадает со сценой смены",
+        "scene_mismatch": true,
         "foreign_equipment": []
       },
       {
@@ -90,6 +104,8 @@
         "has_motion": false,
         "is_first": false,
         "limited_view": false,
+        "limited_reason": "",
+        "scene_mismatch": false,
         "foreign_equipment": []
       },
       {
@@ -101,6 +117,8 @@
         "has_motion": false,
         "is_first": false,
         "limited_view": false,
+        "limited_reason": "",
+        "scene_mismatch": false,
         "foreign_equipment": []
       }
     ]
@@ -115,10 +133,12 @@
         "starts_at": "2026-10-06 09:00:00",
         "frame_id": "W02_2026-10-06_09-00.jpg",
         "has_equipment": true,
-        "has_kit": false,
+        "has_kit": true,
         "has_motion": false,
         "is_first": true,
         "limited_view": false,
+        "limited_reason": "",
+        "scene_mismatch": false,
         "foreign_equipment": []
       },
       {
@@ -126,10 +146,12 @@
         "starts_at": "2026-10-06 09:20:00",
         "frame_id": "W02_2026-10-06_09-20.jpg",
         "has_equipment": true,
-        "has_kit": false,
+        "has_kit": true,
         "has_motion": true,
         "is_first": false,
         "limited_view": false,
+        "limited_reason": "",
+        "scene_mismatch": false,
         "foreign_equipment": []
       },
       {
@@ -137,10 +159,12 @@
         "starts_at": "2026-10-06 09:40:00",
         "frame_id": "W02_2026-10-06_09-40.jpg",
         "has_equipment": true,
-        "has_kit": false,
+        "has_kit": true,
         "has_motion": true,
         "is_first": false,
         "limited_view": false,
+        "limited_reason": "",
+        "scene_mismatch": false,
         "foreign_equipment": []
       },
       {
@@ -148,10 +172,12 @@
         "starts_at": "2026-10-06 10:00:00",
         "frame_id": "W02_2026-10-06_10-00.jpg",
         "has_equipment": true,
-        "has_kit": false,
+        "has_kit": true,
         "has_motion": true,
         "is_first": false,
         "limited_view": false,
+        "limited_reason": "",
+        "scene_mismatch": false,
         "foreign_equipment": []
       },
       {
@@ -159,10 +185,12 @@
         "starts_at": "2026-10-06 10:20:00",
         "frame_id": "W02_2026-10-06_10-20.jpg",
         "has_equipment": true,
-        "has_kit": false,
+        "has_kit": true,
         "has_motion": true,
         "is_first": false,
         "limited_view": false,
+        "limited_reason": "",
+        "scene_mismatch": false,
         "foreign_equipment": []
       },
       {
@@ -170,10 +198,12 @@
         "starts_at": "2026-10-06 10:40:00",
         "frame_id": "W02_2026-10-06_10-40.jpg",
         "has_equipment": true,
-        "has_kit": false,
+        "has_kit": true,
         "has_motion": true,
         "is_first": false,
         "limited_view": false,
+        "limited_reason": "",
+        "scene_mismatch": false,
         "foreign_equipment": []
       },
       {
@@ -185,6 +215,8 @@
         "has_motion": false,
         "is_first": false,
         "limited_view": true,
+        "limited_reason": "ракурс не совпадает со сценой смены",
+        "scene_mismatch": true,
         "foreign_equipment": []
       },
       {
@@ -196,6 +228,8 @@
         "has_motion": false,
         "is_first": false,
         "limited_view": false,
+        "limited_reason": "",
+        "scene_mismatch": false,
         "foreign_equipment": []
       },
       {
@@ -207,6 +241,8 @@
         "has_motion": false,
         "is_first": false,
         "limited_view": false,
+        "limited_reason": "",
+        "scene_mismatch": false,
         "foreign_equipment": []
       }
     ]
@@ -225,6 +261,8 @@
         "has_motion": false,
         "is_first": true,
         "limited_view": false,
+        "limited_reason": "",
+        "scene_mismatch": false,
         "foreign_equipment": []
       },
       {
@@ -236,17 +274,21 @@
         "has_motion": true,
         "is_first": false,
         "limited_view": false,
+        "limited_reason": "",
+        "scene_mismatch": false,
         "foreign_equipment": []
       },
       {
         "index": 2,
         "starts_at": "2026-10-07 09:40:00",
         "frame_id": "W03_2026-10-07_09-40.jpg",
-        "has_equipment": false,
+        "has_equipment": true,
         "has_kit": true,
         "has_motion": true,
         "is_first": false,
         "limited_view": false,
+        "limited_reason": "",
+        "scene_mismatch": false,
         "foreign_equipment": []
       },
       {
@@ -258,6 +300,8 @@
         "has_motion": true,
         "is_first": false,
         "limited_view": false,
+        "limited_reason": "",
+        "scene_mismatch": false,
         "foreign_equipment": []
       },
       {
@@ -269,6 +313,8 @@
         "has_motion": true,
         "is_first": false,
         "limited_view": false,
+        "limited_reason": "",
+        "scene_mismatch": false,
         "foreign_equipment": []
       },
       {
@@ -280,17 +326,21 @@
         "has_motion": true,
         "is_first": false,
         "limited_view": false,
+        "limited_reason": "",
+        "scene_mismatch": false,
         "foreign_equipment": []
       },
       {
         "index": 6,
         "starts_at": "2026-10-07 11:00:00",
         "frame_id": "W03_2026-10-07_11-00.jpg",
-        "has_equipment": false,
+        "has_equipment": true,
         "has_kit": true,
-        "has_motion": true,
+        "has_motion": false,
         "is_first": false,
         "limited_view": false,
+        "limited_reason": "",
+        "scene_mismatch": false,
         "foreign_equipment": []
       },
       {
@@ -302,6 +352,8 @@
         "has_motion": false,
         "is_first": false,
         "limited_view": false,
+        "limited_reason": "",
+        "scene_mismatch": false,
         "foreign_equipment": []
       },
       {
@@ -313,6 +365,8 @@
         "has_motion": false,
         "is_first": false,
         "limited_view": false,
+        "limited_reason": "",
+        "scene_mismatch": false,
         "foreign_equipment": []
       }
     ]
@@ -331,6 +385,8 @@
         "has_motion": false,
         "is_first": true,
         "limited_view": false,
+        "limited_reason": "",
+        "scene_mismatch": false,
         "foreign_equipment": []
       },
       {
@@ -342,6 +398,8 @@
         "has_motion": true,
         "is_first": false,
         "limited_view": false,
+        "limited_reason": "",
+        "scene_mismatch": false,
         "foreign_equipment": []
       },
       {
@@ -353,6 +411,8 @@
         "has_motion": true,
         "is_first": false,
         "limited_view": false,
+        "limited_reason": "",
+        "scene_mismatch": false,
         "foreign_equipment": []
       },
       {
@@ -364,6 +424,8 @@
         "has_motion": true,
         "is_first": false,
         "limited_view": false,
+        "limited_reason": "",
+        "scene_mismatch": false,
         "foreign_equipment": []
       },
       {
@@ -375,6 +437,8 @@
         "has_motion": true,
         "is_first": false,
         "limited_view": false,
+        "limited_reason": "",
+        "scene_mismatch": false,
         "foreign_equipment": []
       },
       {
@@ -386,20 +450,22 @@
         "has_motion": true,
         "is_first": false,
         "limited_view": false,
+        "limited_reason": "",
+        "scene_mismatch": false,
         "foreign_equipment": []
       },
       {
         "index": 6,
         "starts_at": "2026-10-08 11:00:00",
         "frame_id": "W04_2026-10-08_11-00.jpg",
-        "has_equipment": false,
+        "has_equipment": true,
         "has_kit": true,
         "has_motion": false,
         "is_first": false,
-        "limited_view": false,
-        "foreign_equipment": [
-          "Dump truck"
-        ]
+        "limited_view": true,
+        "limited_reason": "ракурс не совпадает со сценой смены",
+        "scene_mismatch": true,
+        "foreign_equipment": []
       },
       {
         "index": 7,
@@ -410,6 +476,8 @@
         "has_motion": false,
         "is_first": false,
         "limited_view": false,
+        "limited_reason": "",
+        "scene_mismatch": false,
         "foreign_equipment": []
       },
       {
@@ -421,6 +489,8 @@
         "has_motion": false,
         "is_first": false,
         "limited_view": false,
+        "limited_reason": "",
+        "scene_mismatch": false,
         "foreign_equipment": []
       }
     ]
@@ -439,6 +509,8 @@
         "has_motion": false,
         "is_first": true,
         "limited_view": false,
+        "limited_reason": "",
+        "scene_mismatch": false,
         "foreign_equipment": []
       },
       {
@@ -450,9 +522,9 @@
         "has_motion": true,
         "is_first": false,
         "limited_view": false,
-        "foreign_equipment": [
-          "Excavator"
-        ]
+        "limited_reason": "",
+        "scene_mismatch": false,
+        "foreign_equipment": []
       },
       {
         "index": 2,
@@ -463,9 +535,9 @@
         "has_motion": true,
         "is_first": false,
         "limited_view": false,
-        "foreign_equipment": [
-          "Excavator"
-        ]
+        "limited_reason": "",
+        "scene_mismatch": false,
+        "foreign_equipment": []
       },
       {
         "index": 3,
@@ -476,9 +548,9 @@
         "has_motion": true,
         "is_first": false,
         "limited_view": false,
-        "foreign_equipment": [
-          "Excavator"
-        ]
+        "limited_reason": "",
+        "scene_mismatch": false,
+        "foreign_equipment": []
       },
       {
         "index": 4,
@@ -489,9 +561,9 @@
         "has_motion": true,
         "is_first": false,
         "limited_view": false,
-        "foreign_equipment": [
-          "Excavator"
-        ]
+        "limited_reason": "",
+        "scene_mismatch": false,
+        "foreign_equipment": []
       },
       {
         "index": 5,
@@ -502,9 +574,9 @@
         "has_motion": true,
         "is_first": false,
         "limited_view": false,
-        "foreign_equipment": [
-          "Excavator"
-        ]
+        "limited_reason": "",
+        "scene_mismatch": false,
+        "foreign_equipment": []
       },
       {
         "index": 6,
@@ -515,11 +587,10 @@
         "has_motion": true,
         "is_first": false,
         "limited_view": false,
+        "limited_reason": "",
+        "scene_mismatch": false,
         "foreign_equipment": [
-          "Bucket loader Big",
-          "Dump truck",
-          "Excavator",
-          "Trailer"
+          "Bucket loader Big"
         ]
       },
       {
@@ -531,6 +602,8 @@
         "has_motion": false,
         "is_first": false,
         "limited_view": false,
+        "limited_reason": "",
+        "scene_mismatch": false,
         "foreign_equipment": []
       },
       {
@@ -542,6 +615,8 @@
         "has_motion": false,
         "is_first": false,
         "limited_view": false,
+        "limited_reason": "",
+        "scene_mismatch": false,
         "foreign_equipment": []
       }
     ]
@@ -556,65 +631,65 @@
         "starts_at": "2026-10-10 09:00:00",
         "frame_id": "W06_2026-10-10_09-00.jpg",
         "has_equipment": true,
-        "has_kit": false,
+        "has_kit": true,
         "has_motion": false,
         "is_first": true,
         "limited_view": false,
-        "foreign_equipment": [
-          "Trailer"
-        ]
+        "limited_reason": "",
+        "scene_mismatch": false,
+        "foreign_equipment": []
       },
       {
         "index": 1,
         "starts_at": "2026-10-10 09:20:00",
         "frame_id": "W06_2026-10-10_09-20.jpg",
         "has_equipment": true,
-        "has_kit": false,
+        "has_kit": true,
         "has_motion": true,
         "is_first": false,
         "limited_view": false,
-        "foreign_equipment": [
-          "Trailer"
-        ]
+        "limited_reason": "",
+        "scene_mismatch": false,
+        "foreign_equipment": []
       },
       {
         "index": 2,
         "starts_at": "2026-10-10 09:40:00",
         "frame_id": "W06_2026-10-10_09-40.jpg",
         "has_equipment": true,
-        "has_kit": false,
+        "has_kit": true,
         "has_motion": true,
         "is_first": false,
         "limited_view": false,
-        "foreign_equipment": [
-          "Trailer"
-        ]
+        "limited_reason": "",
+        "scene_mismatch": false,
+        "foreign_equipment": []
       },
       {
         "index": 3,
         "starts_at": "2026-10-10 10:00:00",
         "frame_id": "W06_2026-10-10_10-00.jpg",
         "has_equipment": true,
-        "has_kit": false,
+        "has_kit": true,
         "has_motion": true,
         "is_first": false,
         "limited_view": false,
-        "foreign_equipment": [
-          "Trailer"
-        ]
+        "limited_reason": "",
+        "scene_mismatch": false,
+        "foreign_equipment": []
       },
       {
         "index": 4,
         "starts_at": "2026-10-10 10:20:00",
         "frame_id": "W06_2026-10-10_10-20.jpg",
         "has_equipment": true,
-        "has_kit": false,
+        "has_kit": true,
         "has_motion": true,
         "is_first": false,
         "limited_view": false,
-        "foreign_equipment": [
-          "Trailer"
-        ]
+        "limited_reason": "",
+        "scene_mismatch": false,
+        "foreign_equipment": []
       },
       {
         "index": 5,
@@ -625,6 +700,8 @@
         "has_motion": true,
         "is_first": false,
         "limited_view": false,
+        "limited_reason": "",
+        "scene_mismatch": false,
         "foreign_equipment": []
       },
       {
@@ -633,9 +710,11 @@
         "frame_id": "W06_2026-10-10_11-00.jpg",
         "has_equipment": false,
         "has_kit": false,
-        "has_motion": true,
+        "has_motion": false,
         "is_first": false,
         "limited_view": true,
+        "limited_reason": "ракурс не совпадает со сценой смены",
+        "scene_mismatch": true,
         "foreign_equipment": []
       },
       {
@@ -647,6 +726,8 @@
         "has_motion": false,
         "is_first": false,
         "limited_view": false,
+        "limited_reason": "",
+        "scene_mismatch": false,
         "foreign_equipment": []
       },
       {
@@ -658,6 +739,8 @@
         "has_motion": false,
         "is_first": false,
         "limited_view": false,
+        "limited_reason": "",
+        "scene_mismatch": false,
         "foreign_equipment": []
       }
     ]
@@ -676,6 +759,8 @@
         "has_motion": false,
         "is_first": true,
         "limited_view": false,
+        "limited_reason": "",
+        "scene_mismatch": false,
         "foreign_equipment": []
       },
       {
@@ -687,6 +772,8 @@
         "has_motion": false,
         "is_first": false,
         "limited_view": false,
+        "limited_reason": "",
+        "scene_mismatch": false,
         "foreign_equipment": []
       },
       {
@@ -698,6 +785,8 @@
         "has_motion": true,
         "is_first": false,
         "limited_view": false,
+        "limited_reason": "",
+        "scene_mismatch": false,
         "foreign_equipment": []
       },
       {
@@ -709,6 +798,8 @@
         "has_motion": true,
         "is_first": false,
         "limited_view": false,
+        "limited_reason": "",
+        "scene_mismatch": false,
         "foreign_equipment": []
       },
       {
@@ -720,6 +811,8 @@
         "has_motion": true,
         "is_first": false,
         "limited_view": false,
+        "limited_reason": "",
+        "scene_mismatch": false,
         "foreign_equipment": []
       },
       {
@@ -731,6 +824,8 @@
         "has_motion": true,
         "is_first": false,
         "limited_view": false,
+        "limited_reason": "",
+        "scene_mismatch": false,
         "foreign_equipment": []
       },
       {
@@ -739,9 +834,11 @@
         "frame_id": "W07_2026-10-11_11-00.jpg",
         "has_equipment": true,
         "has_kit": true,
-        "has_motion": true,
+        "has_motion": false,
         "is_first": false,
-        "limited_view": false,
+        "limited_view": true,
+        "limited_reason": "ракурс не совпадает со сценой смены",
+        "scene_mismatch": true,
         "foreign_equipment": []
       },
       {
@@ -753,6 +850,8 @@
         "has_motion": false,
         "is_first": false,
         "limited_view": false,
+        "limited_reason": "",
+        "scene_mismatch": false,
         "foreign_equipment": []
       },
       {
@@ -764,6 +863,8 @@
         "has_motion": false,
         "is_first": false,
         "limited_view": false,
+        "limited_reason": "",
+        "scene_mismatch": false,
         "foreign_equipment": []
       }
     ]

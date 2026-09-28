@@ -6,6 +6,7 @@ ResNet-18 с одним выходом, обучен авторами фасад
 """
 
 import logging
+import threading
 from pathlib import Path
 
 import torch
@@ -29,6 +30,7 @@ class BarrierClassifier:
         self._weights_path = weights_path
         self._violation_threshold = violation_threshold
         self._model: torch.nn.Module | None = None
+        self._load_lock = threading.Lock()
         self._transform = transforms.Compose(
             [
                 transforms.ToTensor(),
@@ -38,9 +40,20 @@ class BarrierClassifier:
         )
 
     def load(self) -> None:
-        """Поднимает модель в память один раз на весь прогон."""
+        """Поднимает модель в память один раз на весь прогон.
+
+        Замок нужен из-за параллельного разбора кадров смены: без него каждый
+        поток поднимал в память собственную копию весов.
+        """
         if self._model is not None:
             return
+        with self._load_lock:
+            if self._model is not None:
+                return
+            self._load_model()
+
+    def _load_model(self) -> None:
+        """Читает веса и переводит модель в режим предсказания."""
         model = models.resnet18(weights=None)
         model.fc = torch.nn.Linear(FEATURE_COUNT, OUTPUT_COUNT, bias=True)
         state = torch.load(self._weights_path, map_location="cpu", weights_only=True)

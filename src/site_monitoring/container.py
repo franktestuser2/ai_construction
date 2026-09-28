@@ -9,6 +9,7 @@ from .adapters.barrier_classifier import BarrierClassifier
 from .adapters.detection_arbiter import DetectionArbiter
 from .adapters.facade_detector import BuildingDetector, FacadeCellDetector
 from .adapters.motion_observer import MotionObserver
+from .adapters.scene_comparator import SceneComparator
 from .adapters.equipment_detector import EquipmentDetector
 from .adapters.calendar_plan_reader import CalendarPlanReader
 from .adapters.camera_markup_reader import CameraMarkupReader
@@ -83,6 +84,7 @@ def _build_domain_facade(
         recognition=_build_recognition(settings),
         facade_readiness=build_facade_readiness(settings),
         motion_observer=build_motion_observer(settings),
+        scene_comparator=SceneComparator(settings.scene_mismatch_threshold),
         parallel_requests=settings.parallel_requests,
         shift_timeline=ShiftTimelineService(
             slot_minutes=settings.slot_minutes,

@@ -35,14 +35,38 @@ PREVIEW_QUALITY = 74
 FIRST_SLOT_STRIPES = 2
 FULL_STRIPES = 3
 WORK_EVIDENCE_KIND = "признак_работ"
+LEAD_KEY = "lead"
+KIT_KIND = "комплект"
+CREW_KIND = "люди"
 FACADE_CHECK_KEY = "facade_check"
+OBSERVATIONS_KEY = "observations"
 BUILD_STAMP_FORMAT = "%d.%m.%Y %H:%M"
-KIT_TEMPLATE = "Необходимые машины для производства работ: {machines}"
+KIT_TEMPLATE = "1) Основная машина, которая делает работу: {machines}"
+EXTRA_TEMPLATE = "2) Дополнительные машины, работающие при ней: {machines}"
+NO_EXTRA_MACHINES = "не требуются"
+EVIDENCE_TEMPLATE = "Признак работ на объекте: {evidence}"
+CREW_TEMPLATE = "3) Люди на фронте работ: {crew}"
+NO_LEAD_DESCRIPTION = "На кадре нет того, кто делает работу: ни главной машины, ни бригады"
+NO_KIT_DESCRIPTION = "Комплект за смену не собран: дополнительной машины не нашлось"
+NO_MOTION_DESCRIPTION = "Между этим и прошлым кадром работа не подтверждена"
+FOREIGN_DESCRIPTION = "На кадре техника не по этапу: {machine}"
+FRAME_NOTE_TEMPLATE = "Смена {work}, отрезок {time}"
+# Короткие имена работ для подписей: полные названия справочника не читаются с ходу.
+SHORT_TITLES = {
+    "W01": "Погрузка мусора",
+    "W02": "Буронабивные сваи",
+    "W03": "Разработка грунта",
+    "W04": "Фундаментная плита",
+    "W05": "Монолит подземной части",
+    "W06": "Монолит надземной части",
+    "W07": "Фасадная система",
+}
+STAGE_CONFIRMED = "подтверждён"
+STAGE_NOT_CONFIRMED = "не подтверждён"
 FACADE_KIT_TEXT = (
     "Техника на этом этапе не проверяется: работает фасадный пайплайн — "
     "детектор зданий, разбор фасада на ячейки и проверка ограждений"
 )
-LEAD_MARK = " (ведущая)"
 PERCENT = 100
 NOTHING = 0
 
@@ -135,7 +159,9 @@ def _position_index(work_id: str) -> dict[str, dict[str, object]]:
             "lead": position.get("lead", False),
         }
         for alternative in position["alternatives"]:
-            names = alternative.get("detector_classes") or [alternative["machine_type"]]
+            # Находку одной и той же позиции детектор подписывает своим классом,
+            # а модель — названием машины из правил. Роль нужна и для той, и для другой.
+            names = [alternative["machine_type"], *(alternative.get("detector_classes") or [])]
             for name in names:
                 index[name] = role
     return index
@@ -150,29 +176,207 @@ def _position_text(position: dict[str, object]) -> str:
     """
     names = [str(item["machine_type"]).lower() for item in position["alternatives"]]  # type: ignore[index]
     title = str(position["position"]).lower()
-    lead = LEAD_MARK if position.get("lead") else ""
+    # Пометка «ведущая» больше не нужна: ведущая машина стоит в своём пункте перечня.
     if names == [title]:
-        return f"{title}{lead}"
-    return f"{title} — {' или '.join(names)}{lead}"
+        return title
+    return f"{title} — {' или '.join(names)}"
+
+
+def _evidence_seen(observations: dict[str, object], work_id: str) -> bool:
+    """Подтверждён ли признак работ хотя бы на одном снимке смены."""
+    work = _rules_work(work_id)
+    stored = observations.get(work_id)
+    if work is None or stored is None:
+        return False
+    wanted = {
+        alternative["machine_type"]
+        for position in work["positions"]  # type: ignore[index]
+        if position["kind"] == WORK_EVIDENCE_KIND
+        for alternative in position["alternatives"]
+    }
+    if not wanted:
+        return False
+    frames = stored.get(OBSERVATIONS_KEY) or []  # type: ignore[union-attr]
+    found = any(
+        unit["machine_type"] in wanted and unit["count"] > NOTHING
+        for frame in frames
+        for unit in frame["equipment"]
+    )
+    return found
+
+
+def _crew_text(work_id: str) -> str:
+    """Составляет строку о людях на фронте работ.
+
+    Отдельный пункт, потому что бригада — не машина и не состояние объекта: на
+    арматурных и опалубочных работах работу делают руками, и техника при этом простаивает.
+    """
+    work = _rules_work(work_id)
+    if work is None:
+        return ""
+    crew = [
+        str(position["position"]).lower()
+        for position in work["positions"]  # type: ignore[index]
+        if position["kind"] == CREW_KIND
+    ]
+    if not crew:
+        return ""
+    text = CREW_TEMPLATE.format(crew=", ".join(crew))
+    return text
+
+
+def _evidence_text(work_id: str) -> str:
+    """Составляет строку о признаке работ: что должно быть видно на самом объекте.
+
+    Это не машина, а состояние объекта — опалубка и арматура плиты, каркас этажа,
+    облицовка фасада. Машины показывают, чем работу делают, признак — что она сделана.
+    """
+    work = _rules_work(work_id)
+    if work is None:
+        return ""
+    evidence = [
+        str(position["position"]).lower()
+        for position in work["positions"]  # type: ignore[index]
+        if position["kind"] == WORK_EVIDENCE_KIND
+    ]
+    if not evidence:
+        return ""
+    text = EVIDENCE_TEMPLATE.format(evidence=", ".join(evidence))
+    return text
+
+
+def _extra_text(work_id: str) -> str:
+    """Составляет строку о машинах, которые на этапе могут быть, а могут не быть.
+
+    Пункт стоит у каждого этапа с техникой, даже когда сопутствующих машин нет:
+    пустое место на его месте читается как недосмотр, а не как «их и не требуется».
+    """
+    if _is_facade(work_id):
+        return ""
+    machines = _machines_text(work_id, lead=False) or NO_EXTRA_MACHINES
+    text = EXTRA_TEMPLATE.format(machines=machines)
+    return text
+
+
+def _is_facade(work_id: str) -> bool:
+    """Проверяет, что работу подтверждает фасадный пайплайн, а не техника."""
+    work = _rules_work(work_id)
+    if work is None:
+        return False
+    facade = bool(work.get(FACADE_CHECK_KEY))
+    return facade
+
+
+def _machines_text(work_id: str, lead: bool) -> str:
+    """Перечисляет машины этапа: ведущие отдельно, все прочие отдельно.
+
+    Перечисляется только комплект: главная машина делает саму работу — грузит, бурит,
+    подаёт бетон, — а остальные машины комплекта работают при ней. Допустимая техника
+    вроде прицепа или бульдозера в перечень не идёт: она на площадке бывает, но работу
+    не делает и комплект не закрывает.
+
+    Рядом с позицией перечисляется, чем её можно закрыть: позиции названы по работе,
+    а не по классу машины, и без перечня «машина для погрузки» не говорит о том, что
+    её закрывает экскаватор.
+    """
+    work = _rules_work(work_id)
+    if work is None or work.get(FACADE_CHECK_KEY):
+        return ""
+    machines = [
+        _position_text(position)
+        for position in work["positions"]  # type: ignore[index]
+        if position["kind"] == KIT_KIND and bool(position.get(LEAD_KEY)) is lead
+    ]
+    text = ", ".join(machines).lower()
+    return text
 
 
 def _kit_text(work_id: str) -> str:
-    """Составляет строку о том, какие машины нужны для производства этих работ."""
+    """Составляет строку о машинах, без которых работа не идёт."""
     work = _rules_work(work_id)
     if work is None:
         return ""
     if work.get(FACADE_CHECK_KEY):
         return FACADE_KIT_TEXT
-    # Рядом с позицией перечисляется, чем её можно закрыть: позиции названы по работе,
-    # а не по классу машины, и без перечня «машина для погрузки» не говорит о том, что
-    # её закрывает экскаватор.
-    machines = [
-        _position_text(position)
-        for position in work["positions"]  # type: ignore[index]
-        if position["kind"] != WORK_EVIDENCE_KIND
-    ]
-    text = KIT_TEMPLATE.format(machines=", ".join(machines).lower())
+    machines = _machines_text(work_id, lead=True)
+    if not machines:
+        return ""
+    text = KIT_TEMPLATE.format(machines=machines)
     return text
+
+
+def _slot_assessment(slot: dict[str, object], shift: dict[str, object]) -> dict[str, object]:
+    """Собирает вердикт по кадру для вкладки просмотра: засчитан ли отрезок и почему."""
+    deviations: list[dict[str, str]] = []
+    if slot.get("limited_view"):
+        reason = slot.get("limited_reason") or "фронт работ не виден"
+        deviations.append({"description": f"Отрезок вне контроля ИИ: {reason}"})
+    if not slot.get("has_equipment"):
+        deviations.append({"description": NO_LEAD_DESCRIPTION})
+    elif not slot.get("has_kit"):
+        deviations.append({"description": NO_KIT_DESCRIPTION})
+    if slot.get("has_equipment") and not slot.get("has_motion") and not slot.get("is_first"):
+        deviations.append({"description": NO_MOTION_DESCRIPTION})
+    for machine in slot.get("foreign_equipment") or []:
+        deviations.append({"description": FOREIGN_DESCRIPTION.format(machine=machine)})
+    confirmed = [
+        unit["machine_type"]
+        for unit in (slot.get("details") or {}).get("equipment", [])  # type: ignore[union-attr]
+        if unit.get("count", NOTHING) > NOTHING and unit.get("role")
+    ]
+    assessment = {
+        "is_compliant": bool(slot.get("is_counted")),
+        "deviations": deviations,
+        "confirmed_equipment": confirmed,
+    }
+    return assessment
+
+
+def _short_title(work_id: str, full_name: str) -> str:
+    """Короткое имя вида работ для подписей.
+
+    Полные названия справочника ЛЦТ идут со всеми уточнениями в скобках и занимают
+    в подписи три строки. В таблицах и легендах нужно имя, которое читается с одного
+    взгляда, а полное остаётся в разборе кадра.
+    """
+    short = SHORT_TITLES.get(work_id)
+    if short is not None:
+        return short
+    tail = str(full_name).split(" → ")[-1]
+    cut = tail.split("(")[0].split(",")[0].strip()
+    return cut or tail
+
+
+def _stages_from_shifts(shifts: list[dict[str, object]]) -> list[dict[str, object]]:
+    """Раскладывает кадры смен по видам работ для вкладки просмотра."""
+    stages = []
+    for shift in shifts:
+        frames = []
+        for slot in shift["slots"]:  # type: ignore[index]
+            if slot.get("frame_id") is None:
+                continue
+            details = slot.get("details") or {}
+            frames.append({
+                "file": slot["frame_id"],
+                "captured_at": str(slot["starts_at"]),
+                "note": FRAME_NOTE_TEMPLATE.format(
+                    work=shift["work_id"], time=str(slot["starts_at"])[11:16]
+                ),
+                "equipment": details.get("equipment", []),  # type: ignore[union-attr]
+                "assessment": _slot_assessment(slot, shift),
+                "missing_mandatory": not slot.get("has_equipment"),
+            })
+        counted = sum(1 for slot in shift["slots"] if slot.get("is_counted"))  # type: ignore[union-attr]
+        stages.append({
+            "work_id": shift["work_id"],
+            "full_name": shift["work_name"],
+            "short_name": _short_title(str(shift["work_id"]), str(shift["work_name"])),
+            "start": shift["plan_date"],
+            "finish": shift["plan_date"],
+            "status": STAGE_CONFIRMED if counted > NOTHING else STAGE_NOT_CONFIRMED,
+            "frames": frames,
+        })
+    return stages
 
 
 class StandBuilder:
@@ -186,6 +390,10 @@ class StandBuilder:
         payload: dict[str, object] = dict(self._sources.frames_payload or {"stages": []})
         shifts, images = self._collect_shifts()
         payload["shifts"] = shifts
+        # Просмотр снимков идёт по тем же кадрам, что разложены по отрезкам смен:
+        # два разных набора на одной странице сбивали с толку — было непонятно,
+        # какие снимки в итоге дали проценты выполнения.
+        payload["stages"] = _stages_from_shifts(shifts)
         payload["dashboard"] = self._build_dashboard()
         payload["images"] = images | self._collect_frame_photos(payload)
         payload["about"] = self._sources.about_html
@@ -245,7 +453,15 @@ class StandBuilder:
                     path = self._photo_path(work_id, slot["frame_id"])
                     images[slot["frame_id"]] = self._save_photo(path, slot["frame_id"])
             timeline["work_name"] = self._sources.titles.get(work_id, work_id)
+            timeline["short_name"] = _short_title(work_id, timeline["work_name"])
             timeline["kit"] = _kit_text(work_id)
+            timeline["extra_kit"] = _extra_text(work_id)
+            timeline["crew"] = _crew_text(work_id)
+            timeline["evidence"] = _evidence_text(work_id)
+            timeline["evidence_seen"] = _evidence_seen(observations, work_id)
+            timeline["lead_seen"] = any(slot["has_equipment"] for slot in timeline["slots"])
+            # На фасадном этапе полоски означают другое, и подписи страница берёт по этому флагу.
+            timeline["facade"] = _is_facade(work_id)
             shifts.append(timeline)
         return shifts, images
 
